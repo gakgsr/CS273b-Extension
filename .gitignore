@@ -1,0 +1,6 @@
+*.png
+*.txt
+*.pyc
+*.zip
+.DS_Store
+nimit_test/*
