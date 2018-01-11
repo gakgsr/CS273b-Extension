@@ -90,9 +90,9 @@ print("PR AUC: %g" % auprc)
 print("f1 score: %g" % conv_net.calc_f1(sess))
 conv_net.print_confusion_matrix(sess)
 
-
-tb = 10000 # Test batch size
-numBatches = (len(loader.referenceChrFull[str(chromosome)]) + tb - 1) // tb
+loader.load_chromosome_window_data()
+tb = 1000 # Test batch size
+numBatches = (len(loader.referenceChr) + tb - 1) // tb
 predNums = [0]*numBatches
 print('{} batches'.format(numBatches))
 
@@ -102,7 +102,7 @@ fullPreds = None
 realIndels = []
 indices = []
 for i in range(numBatches):
-  X, y, lb, ub = loader.load_chromosome_window_batch(window_size=config.window, batch_size=tb)
+  X, indelList, indexList = loader.load_chromosome_window_batch_modified(window_size=config.window, batch_size=tb)
   if i % 1000 == 0:
     print('Batch {}'.format(i))
   if np.sum(X) == 0: # No indels in the entire bucket. Skip for brevity
@@ -112,13 +112,13 @@ for i in range(numBatches):
   predNums[i] = sumpreds
   numTest += 1
   #if numTest > maxNumTest: break # To truncate the program and predict on just a subset of the chromosome.
-  indelList = [x in loader.setOfIndelLocations for x in range(lb, ub)] # Whether each x in [lb, ub) is an indel or not.
+  #indelList = [x in loader.setOfIndelLocations for x in range(lb, ub)] # Whether each x in [lb, ub) is an indel or not.
   if fullPreds is None:
     fullPreds = utils.flatten(preds)
   else:
     fullPreds = np.concatenate((fullPreds, utils.flatten(preds)))
   realIndels.extend(indelList)
-  indices.extend([i for i in range(lb, ub)]) # The actual indices that were examined
+  indices.extend(indexList) # The actual indices that were examined
 
 from sklearn import metrics
 print(metrics.average_precision_score(realIndels, fullPreds)) # Most positions are not indels, so we report the average precision score (similar to AUPRC)
@@ -126,38 +126,3 @@ print(metrics.average_precision_score(realIndels, fullPreds)) # Most positions a
 # Save the results
 arr = np.concatenate((np.expand_dims(indices, axis=1), np.expand_dims(realIndels, axis=1), np.expand_dims(fullPreds, axis=1)), axis=1)
 np.save("/datadrive/project_data/genomeIndelPredictionsUnSpaced.npy", arr)
-
-# Repeat for the spaced test case
-numTest = 0
-maxNumTest = 1000
-fullPreds = None
-realIndels = []
-indices = []
-loader.chrom_index = 0
-print "Checking if chrom_index value was changed"
-print loader.chrom_index
-for i in range(numBatches):
-  X, y, lb, ub = loader.load_chromosome_window_batch_spaced(window_size=config.window, batch_size=tb)
-  if i % 1000 == 0:
-    print('Batch {}'.format(i))
-  if np.sum(X) == 0: # No indels in the entire bucket. Skip for brevity
-    continue
-  preds = utils.flatten(conv_net.predict(sess, X))
-  sumpreds = sum(preds.round()) # Sum of predicted probabilities for the current window
-  predNums[i] = sumpreds
-  numTest += 1
-  #if numTest > maxNumTest: break # To truncate the program and predict on just a subset of the chromosome.
-  indelList = [x in loader.setOfIndelLocations for x in range(lb, ub)] # Whether each x in [lb, ub) is an indel or not.
-  if fullPreds is None:
-    fullPreds = utils.flatten(preds)
-  else:
-    fullPreds = np.concatenate((fullPreds, utils.flatten(preds)))
-  realIndels.extend(indelList)
-  indices.extend([i for i in range(lb, ub)]) # The actual indices that were examined
-
-from sklearn import metrics
-print(metrics.average_precision_score(realIndels, fullPreds)) # Most positions are not indels, so we report the average precision score (similar to AUPRC)
-
-# Save the results
-arr = np.concatenate((np.expand_dims(indices, axis=1), np.expand_dims(realIndels, axis=1), np.expand_dims(fullPreds, axis=1)), axis=1)
-np.save("/datadrive/project_data/genomeIndelPredictionsSpaced.npy", arr)

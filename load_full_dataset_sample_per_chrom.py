@@ -12,7 +12,7 @@ import entropy
 data_dir = "/datadrive/project_data/"
 
 class DatasetLoader(object):
-  def __init__(self, _kw=0, windowSize=100, batchSize=100, testBatchSize=500, seed=1, pos_frac=0.5, load_coverage=True, load_entropy=False, triclass=False, nearby=0, offset=0):
+  def __init__(self, _kw=0, windowSize=100, batchSize=100, testBatchSize=500, seed=1, pos_frac=0.5, load_coverage=True, load_entropy=False, triclass=False, nearby=0, offset=0, complexity_threshold=0):
     self.window = windowSize # If window size k, means we read k base pairs before the center and k after, for a total of 2k+1 base pairs in the input
     self.batchSize = batchSize # Number of training examples per batch
     self.testBatchSize = testBatchSize # Number of testing examples per test batch (we can't test everything at once due to memory)
@@ -21,6 +21,7 @@ class DatasetLoader(object):
     self.offset = offset # Either 0 or 1, to handle 1-indexing of the gnomad_indels.tsv file. Technically should be 1, but in practice 0 seems to work just as well??
     self.load_entropy = load_entropy # Whether to use calculated sequence entropy as input to the model
     self.load_coverage = load_coverage # Whether to use coverage data as input to the model
+    self.complexity_threshold = complexity_threshold # The minimum complexity of the sequence needed to be a part of our train/test/val sets
     self.include_filtered = include_filtered # If include_filtered is false, filtered examples are excluded from the set of positive indel examples
     self.referenceChrFull, ambiguous_bases = cs273b.load_bitpacked_reference(data_dir + "Homo_sapiens_assembly19.fasta.bp") # Load the reference genome
     del ambiguous_bases # Preserve memory
@@ -38,6 +39,7 @@ class DatasetLoader(object):
   # In this module, we only look at high complexity sequences, ie. locations which have complexity (window size 20 to measure it) >= 1.1
   def __initializeTrainData(self, frac_positives):
     k = self.window # for brevity
+    k_seq_complexity = 20 # The window size used to compute sequence complexity
     self.indelLocations = np.loadtxt(data_dir + "indelLocations21.txt").astype(int) # This has been loaded just to set the number of examples per chromosome
     num_chrom_used = 21 # We use chromosomes 2-22, we won't use chromosome 1 until the very end
     lengthIndels = int(len(self.indelLocations)/16)*num_chrom_used # Number of indels in the entire dataset
@@ -76,10 +78,11 @@ class DatasetLoader(object):
         self.indelLocations = self.indelLocations - self.offset
       else:
         #self.indelLocationsFull = np.loadtxt(data_dir + "indelLocations{}".format(chromosome) + ext).astype(int)
-        indel_data_load = np.loadtxt(data_dir + "indelLocationsFiltered{}".format(chromosome) + ext).astype(int) # This is a 3 column data, the first being indel locations, second being allele count, and third being filter value
+        indel_data_load = np.loadtxt(data_dir + "indelLocationsFiltered{}".format(chromosome) + ext).astype(int) # This is a 5 column data: indel locations, allele count, filter value, 20 window, and 50 window sequence complexity
         self.indelLocationsFull = indel_data_load[:, 0] # Even non-filtered ones are a part of indelLocationsFull, so that we don't put these in the negative examples even by chance
         total_indices = np.arange(indel_data_load.shape[0])
-        filtered_indices = indel_load_data[:, 2] == True
+        # Filter by sequence complexity around 20 sized window and complexity threshold
+        filtered_indices = np.logical_and(np.array(indel_load_data[:, 2] == True) and np.array(indel_load_data[:, 3] >= self.complexity_threshold))
         filtered_indices = total_indices[filtered_indices]
         indel_indices = np.random.choice(filtered_indices, size=lengthIndels_per_chrom, replace=False)
         self.indelLocations = indel_data_load[indel_indices, 0]
@@ -126,7 +129,7 @@ class DatasetLoader(object):
               pos = nearby_indels[total_length_per_chrom*(chromosome - 1) + i] + np.random.randint(1, self.nearby+1) * np.random.choice([-1, 1])
               niter += 1
           else:
-            while (pos in self.prevChosenRefLocations) or (pos in self.setOfIndelLocations):
+            while (pos in self.prevChosenRefLocations) or (pos in self.setOfIndelLocations) or entropy.entropySequence(self.referenceChr[pos - k_seq_complexity : pos + k_seq_complexity + 1]) < self.complexity_threshold:
               pos = np.random.choice(self.nonzeroLocationsRef)
           self.prevChosenRefLocations.add(pos)
         indices[total_length_per_chrom*(chromosome - 1) + i] = pos
@@ -304,16 +307,16 @@ class DatasetLoader(object):
       self.deletionLocations = np.loadtxt(data_dir + "indelLocations{}_del".format(chromosome) + ext).astype(int)
       self.indelLocations = np.concatenate((self.insertionLocations, self.deletionLocations)) - self.offset
     else:
-      indel_data_load = np.loadtxt(data_dir + "indelLocationsFiltered{}".format(chromosome) + ext).astype(int) # This is a 3 column data, the first being indel locations, second being allele count, and third being filter value
+      indel_data_load = np.loadtxt(data_dir + "indelLocationsFiltered{}".format(chromosome) + ext).astype(int) # This is a 5 column data: indel locations, allele count, filter value, 20 window, and 50 window sequence complexity
       self.indelLocationsFull = indel_data_load[:, 0] # Even non-filtered ones are a part of indelLocationsFull, so that we don't put these in the negative examples even by chance
       total_indices = np.arange(indel_data_load.shape[0])
-      filtered_indices = indel_load_data[:, 2] == True
+      # Filter by sequence complexity around 20 sized window and complexity threshold
+      filtered_indices = np.logical_and(np.array(indel_load_data[:, 2] == True) and np.array(indel_load_data[:, 3] >= self.complexity_threshold))
       filtered_indices = total_indices[filtered_indices]
       indel_indices = np.random.choice(filtered_indices, size=lengthIndels_per_chrom, replace=False)
       self.indelLocations = indel_data_load[indel_indices, 0]
-      allele_count_val = indel_data_load[indel_indices, 1]
       del indel_data_load, indel_indices, filtered_indices, total_indices
-      self.indelLocations = self.indelLocations - self.offset
+      self.setOfIndelLocations = set(self.indelLocations)
 
   def load_chromosome_window_batch(self, window_size, batch_size):
     lb = max(window_size, self.chrom_index) # we should probably instead pad with random values (actually may not be needed)
@@ -324,11 +327,17 @@ class DatasetLoader(object):
     labels = [ex in self.setOfIndelLocations for ex in range(lb, ub)]
     return self.referenceChr[X+Y, :], labels, lb, ub
 
-  def load_chromosome_window_batch_spaced(self, window_size, batch_size):
+  def load_chromosome_window_batch_modified(self, window_size, batch_size):
     lb = max(window_size, self.chrom_index) # we should probably instead pad with random values (actually may not be needed)
     ub = min(len(self.referenceChr) - window_size, lb + batch_size) # ditto to above. also, ub is not inclusive
     num_ex = ub - lb
-    X, Y = np.mgrid[lb - window_size : 2*window_size + 1 : lb - window_size + num_ex, 0 : 2*window_size + 1]
+    X, Y = np.mgrid[lb - window_size : lb - window_size + num_ex, 0 : 2*window_size + 1]
     self.chrom_index = ub
-    labels = [ex in self.setOfIndelLocations for ex in range(lb, 2*window_size + 1, ub)]
-    return self.referenceChr[X+Y, :], labels, lb, ub
+    k = window_size
+    k_seq_complexity = 20
+    indelList = [x in loader.setOfIndelLocations for x in range(lb, ub)]
+    seqDataset = self.referenceChr[X+Y, :]
+    complexity = entropy.entropySequence(seqDataset[:, k - k_seq_complexity : k + k_seq_complexity + 1, :])
+    indexList = [complexity[x - lb] >= self.complexity_threshold for x in range(lb, ub)]
+    seqDataset = seqDataset[indexList]
+    return seqDataset, indelList, indexList

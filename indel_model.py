@@ -346,15 +346,15 @@ class IndelModel(object):
         print "Model Prediction in AC > 1 set\n"
         validIndices = np.logical_or(testAC > 1, testLabels == 0)
         self.print_metrics_for_binned(testLabels, predictions, validIndices)
-        print("Validation Chromosome: {}".format(self.loader.val_chrom))
-        print("Test Chromosome: {}".format(self.loader.test_chrom))
 
     # Print all of the import metrics and plots. Also write sthese results to a text file with the specified name.
     def print_metrics(self, sess, plot_prefix, output_stats_file):
         losses, val_accuracies = self.fit(sess, save=True)
         self.predictAll(sess, save=True)
         #self.plot_complexity(sess)
-        self.print_binned_accuracy(sess)
+        #self.print_binned_accuracy(sess)
+        print("Validation Chromosome: {}".format(self.loader.val_chrom))
+        print("Test Chromosome: {}".format(self.loader.test_chrom))
         test_acc = self.test(sess)
         print("test accuracy %g" % test_acc)
         auroc = self.calc_roc(sess, plot_prefix + '_auroc.png')
