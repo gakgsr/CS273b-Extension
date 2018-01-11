@@ -22,7 +22,6 @@ class DatasetLoader(object):
     self.load_entropy = load_entropy # Whether to use calculated sequence entropy as input to the model
     self.load_coverage = load_coverage # Whether to use coverage data as input to the model
     self.complexity_threshold = complexity_threshold # The minimum complexity of the sequence needed to be a part of our train/test/val sets
-    self.include_filtered = include_filtered # If include_filtered is false, filtered examples are excluded from the set of positive indel examples
     self.referenceChrFull, ambiguous_bases = cs273b.load_bitpacked_reference(data_dir + "Homo_sapiens_assembly19.fasta.bp") # Load the reference genome
     del ambiguous_bases # Preserve memory
     self.cur_index = 0 # Index of next training example (for batching purposes)
