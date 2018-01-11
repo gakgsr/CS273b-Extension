@@ -23,7 +23,7 @@ class Config(object):
 
 
 config = Config()
-loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, test_frac=0.025, load_coverage=False, complexity_threshold=1.1)
+loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, load_coverage=False, complexity_threshold=1.1)
 #loader = load_dataset.DatasetLoader(chromosome=21, windowSize=config.window,
 #                                    batchSize=config.batch_size,
 #                                    testBatchSize=config.test_batch_size,
