@@ -77,11 +77,11 @@ class DatasetLoader(object):
         self.indelLocations = self.indelLocations - self.offset
       else:
         #self.indelLocationsFull = np.loadtxt(data_dir + "indelLocations{}".format(chromosome) + ext).astype(int)
-        indel_data_load = np.loadtxt(data_dir + "indelLocationsFiltered{}".format(chromosome) + ext).astype(int) # This is a 5 column data: indel locations, allele count, filter value, 20 window, and 50 window sequence complexity
+        indel_data_load = np.loadtxt(data_dir + "indelLocationsFiltered{}".format(chromosome) + ext).astype(int) # This is a 5 column data: indel locations, allele count, filter value, 50 window, and 20 window sequence complexity
         self.indelLocationsFull = indel_data_load[:, 0] # Even non-filtered ones are a part of indelLocationsFull, so that we don't put these in the negative examples even by chance
         total_indices = np.arange(indel_data_load.shape[0])
         # Filter by sequence complexity around 20 sized window and complexity threshold
-        filtered_indices = np.logical_and(np.array(indel_load_data[:, 2] == True) and np.array(indel_load_data[:, 3] >= self.complexity_threshold))
+        filtered_indices = np.logical_and(np.array(indel_load_data[:, 2] == 1) and np.array(indel_load_data[:, 4] >= self.complexity_threshold))
         filtered_indices = total_indices[filtered_indices]
         indel_indices = np.random.choice(filtered_indices, size=lengthIndels_per_chrom, replace=False)
         self.indelLocations = indel_data_load[indel_indices, 0]
@@ -306,11 +306,11 @@ class DatasetLoader(object):
       self.deletionLocations = np.loadtxt(data_dir + "indelLocations{}_del".format(chromosome) + ext).astype(int)
       self.indelLocations = np.concatenate((self.insertionLocations, self.deletionLocations)) - self.offset
     else:
-      indel_data_load = np.loadtxt(data_dir + "indelLocationsFiltered{}".format(chromosome) + ext).astype(int) # This is a 5 column data: indel locations, allele count, filter value, 20 window, and 50 window sequence complexity
+      indel_data_load = np.loadtxt(data_dir + "indelLocationsFiltered{}".format(chromosome) + ext).astype(int) # This is a 5 column data: indel locations, allele count, filter value, 50 window, and 20 window sequence complexity
       self.indelLocationsFull = indel_data_load[:, 0] # Even non-filtered ones are a part of indelLocationsFull, so that we don't put these in the negative examples even by chance
       total_indices = np.arange(indel_data_load.shape[0])
       # Filter by sequence complexity around 20 sized window and complexity threshold
-      filtered_indices = np.logical_and(np.array(indel_load_data[:, 2] == True) and np.array(indel_load_data[:, 3] >= self.complexity_threshold))
+      filtered_indices = np.logical_and(np.array(indel_load_data[:, 2] == 1) and np.array(indel_load_data[:, 4] >= self.complexity_threshold))
       filtered_indices = total_indices[filtered_indices]
       indel_indices = np.random.choice(filtered_indices, size=lengthIndels_per_chrom, replace=False)
       self.indelLocations = indel_data_load[indel_indices, 0]
