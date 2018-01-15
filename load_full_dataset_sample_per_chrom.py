@@ -79,14 +79,14 @@ class DatasetLoader(object):
       else:
         #self.indelLocationsFull = np.loadtxt(data_dir + "indelLocations{}".format(chromosome) + ext).astype(int)
         indel_data_load = pd.read_csv(data_dir + "indelLocationsFiltered" + str(chromosome) + ".txt", delimiter = ' ', header = None) # This is a 5 column data: indel locations, allele count, filter value, 50 window, and 20 window sequence complexity
-        self.indelLocationsFull = indel_data_load.iloc[:, 0].tolist() # Even non-filtered ones are a part of indelLocationsFull, so that we don't put these in the negative examples even by chance
+        self.indelLocationsFull = np.array(indel_data_load.iloc[:, 0]) # Even non-filtered ones are a part of indelLocationsFull, so that we don't put these in the negative examples even by chance
         total_indices = np.arange(len(self.indelLocationsFull))
         # Filter by sequence complexity around 20 sized window and complexity threshold
-        filtered_indices = np.logical_and(np.array(indel_load_data.iloc[:, 2] == 1) and np.array(indel_load_data.iloc[:, 4] >= self.complexity_threshold))
+        filtered_indices = np.logical_and(np.array(indel_data_load.iloc[:, 2] == 1), np.array(indel_data_load.iloc[:, 4] >= self.complexity_threshold))
         filtered_indices = total_indices[filtered_indices]
         indel_indices = np.random.choice(filtered_indices, size=lengthIndels_per_chrom, replace=False)
-        self.indelLocations = indel_data_load.iloc[indel_indices, 0]
-        allele_count_val = indel_data_load.iloc[indel_indices, 1]
+        self.indelLocations = np.array(indel_data_load.iloc[indel_indices, 0])
+        allele_count_val = np.array(indel_data_load.iloc[indel_indices, 1])
         del indel_data_load, indel_indices, filtered_indices, total_indices
         self.indelLocations = self.indelLocations - self.offset
       self.nonzeroLocationsRef = np.where(np.any(self.referenceChr != 0, axis = 1))[0]
@@ -98,12 +98,12 @@ class DatasetLoader(object):
         self.coverage = lc.load_coverage(data_dir + "coverage/{}.npy".format(chromosome))
       self.setOfIndelLocations = set(self.indelLocations)
       self.prevChosenRefLocations = set()
-      nearby_indels[total_length_per_chrom*(chromosome - 1) : total_length_per_chrom*(chromosome - 1) + lengthIndels_per_chrom] = self.indelLocations
+      nearby_indels[total_length_per_chrom*(chromosome - 2) : total_length_per_chrom*(chromosome - 2) + lengthIndels_per_chrom] = self.indelLocations
 
       # dataset should have all the indels as well as random negative training samples
       if self.nearby:
         neg_positions = np.random.choice(self.indelLocations, size=num_negatives_per_chrom)
-        nearby_indels[total_length_per_chrom*(chromosome - 1) + lengthIndels_per_chrom : total_length_per_chrom*chromosome] = neg_positions
+        nearby_indels[total_length_per_chrom*(chromosome - 2) + lengthIndels_per_chrom : total_length_per_chrom*(chromosome-1)] = neg_positions
         offset = np.multiply(np.random.randint(1, self.nearby+1, size=num_negatives_per_chrom), np.random.choice([-1, 1], size=num_negatives_per_chrom))
         neg_positions = neg_positions + offset # locations that are offset from indels by some amount
       else:
@@ -118,39 +118,39 @@ class DatasetLoader(object):
           else:
             label = 2 # deletions will be labeled as 2
           pos = self.indelLocations[i]
-          allele_count[total_length_per_chrom*(chromosome - 1) + i] = allele_count_val[i]
+          allele_count[total_length_per_chrom*(chromosome - 2) + i] = allele_count_val[i]
         else:
           label = 0
           pos = neg_positions[i - lengthIndels_per_chrom]
           if self.nearby:
             niter = 0
             while (pos in self.prevChosenRefLocations) or (pos in self.setOfZeroLocations) or (pos in self.setOfIndelLocations) and niter < 1001:
-              nearby_indels[total_length_per_chrom*(chromosome - 1) + i] = np.random.choice(self.indelLocations)
-              pos = nearby_indels[total_length_per_chrom*(chromosome - 1) + i] + np.random.randint(1, self.nearby+1) * np.random.choice([-1, 1])
+              nearby_indels[total_length_per_chrom*(chromosome - 2) + i] = np.random.choice(self.indelLocations)
+              pos = nearby_indels[total_length_per_chrom*(chromosome - 2) + i] + np.random.randint(1, self.nearby+1) * np.random.choice([-1, 1])
               niter += 1
           else:
-            while (pos in self.prevChosenRefLocations) or (pos in self.setOfIndelLocations) or entropy.entropySequence(self.referenceChr[pos - k_seq_complexity : pos + k_seq_complexity + 1]) < self.complexity_threshold:
+            while (pos in self.prevChosenRefLocations) or (pos in self.setOfIndelLocations):# or entropy.entropySequence(self.referenceChr[pos - k_seq_complexity : pos + k_seq_complexity + 1]) < self.complexity_threshold:
               pos = np.random.choice(self.nonzeroLocationsRef)
           self.prevChosenRefLocations.add(pos)
-        indices[total_length_per_chrom*(chromosome - 1) + i] = pos
+        indices[total_length_per_chrom*(chromosome - 2) + i] = pos
         coverageWindow = np.zeros(2*k + 1)
         # get k base pairs before and after the position
         window = self.referenceChr[pos - k : pos + k + 1]
         coverageWindow = None
         if self.coverage is not None:
           coverageWindow = utils.flatten(self.coverage[pos - k : pos + k + 1])
-        dataset[total_length_per_chrom*(chromosome - 1) + i] = window
-        coverageDataset[total_length_per_chrom*(chromosome - 1) + i] = coverageWindow
-        labels[total_length_per_chrom*(chromosome - 1) + i] = label
-        genome_positions[total_length_per_chrom*(chromosome - 1) + i] = pos
-        chrom_num[total_length_per_chrom*(chromosome - 1) + i] = chromosome
+        dataset[total_length_per_chrom*(chromosome - 2) + i] = window
+        coverageDataset[total_length_per_chrom*(chromosome - 2) + i] = coverageWindow
+        labels[total_length_per_chrom*(chromosome - 2) + i] = label
+        genome_positions[total_length_per_chrom*(chromosome - 2) + i] = pos
+        chrom_num[total_length_per_chrom*(chromosome - 2) + i] = chromosome
     if self.load_entropy:
       entropyDataset[:, k+1:2*k+1] = entropy.entropyVector(dataset)
     # Set the number of training examples, validation examples (then the test example numbers is automatically set)
     self.num_train_examples = total_length_per_chrom*(num_chrom_used - 2)
     self.num_val_examples = total_length_per_chrom
     # Randomly choose the validation and test chromosome
-    self.val_chrom, self.test_chrom = np.random.choice(23, 2, replace=False) + 1
+    self.val_chrom, self.test_chrom = np.random.choice(range(2, 23), 2, replace=False)
     # Shuffle the list and then populate dataset and other variables
     # The first self.num_train_examples are the training examples, the next self.num_val_examples are validation examples, and the remaining are test examples
     # This is very verbose, maybe it can be written in a neater manner
