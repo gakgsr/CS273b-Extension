@@ -146,15 +146,18 @@ class DatasetLoader(object):
       ## Create the negative dataset
       nonzeroLocationsRef = np.where(np.any(referenceChr != 0, axis = 1))[0]
       # Sample a larger set from the non-Zero locations
-      neg_positions_large = np.random.choice(list(set(nonzeroLocationsRef) - set(indelLocationsFull)), size = 10*num_negatives_per_chrom, replace = False)
+      rel_size_neg_large = 2
+      neg_positions_large = np.random.choice(list(set(nonzeroLocationsRef) - set(indelLocationsFull)), size = rel_size_neg_large*num_negatives_per_chrom, replace = False)
       # Remove those that have complexity below the threshold
       neg_sequence_indices = np.arange(2*k_seq_complexity + 1) - k_seq_complexity
       neg_sequence_indices = np.repeat(neg_sequence_indices, len(neg_positions_large), axis = 0)
       neg_sequence_indices = np.reshape(neg_sequence_indices, [-1, len(neg_positions_large)])
       neg_sequence_indices += np.transpose(neg_positions_large)
-      neg_sequence_complexity = entropy.entropySequence(referenceChr[neg_sequence_indices.transpose(), :])
+      neg_sequence_indices = np.reshape(neg_sequence_indices, [-1, len(neg_positions_large)])
+      neg_seq_large = referenceChr[neg_sequence_indices.transpose(), :]
+      neg_sequence_complexity = entropy.entropySequence(neg_seq_large)
       neg_positions_large = neg_positions_large[neg_sequence_complexity >= self.complexity_threshold]
-      del neg_sequence_indices, neg_sequence_complexity
+      del neg_sequence_indices, neg_sequence_complexity, neg_seq_large
       ##
       if self.nearby:
         # Create a list of all permissible nearby locations
@@ -256,7 +259,7 @@ class DatasetLoader(object):
       self.test_data.append(self.entropyDataset[self.test_indices])
     self.test_data.append(self.labels[self.test_indices])
     self.test_data = tuple(self.test_data)
-    print("Number of test examples: {}".format(len(test_data_y)))
+    print("Number of test examples: {}".format(len(self.test_indices)))
 
   # Total number of training batches based on given batch size.
   def num_trainbatches(self):

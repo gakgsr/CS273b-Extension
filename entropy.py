@@ -12,7 +12,7 @@ def entropySequence(sequenceStrings):
     lenSequenceString = sequenceStrings.shape
     entropyString = np.zeros(lenSequenceString[0])
     for j in range(4):
-        probLetter = np.sum(sequenceStrings[:, :, j], axis = 1)/lenSequenceString[1]
+        probLetter = np.sum(sequenceStrings[:, :, j], axis = 1, dtype = float)/lenSequenceString[1]
         logProbLetter = np.log(probLetter)
         logProbLetter[logProbLetter == -np.Inf] = 0
         entropyString -= np.multiply(probLetter, logProbLetter)
