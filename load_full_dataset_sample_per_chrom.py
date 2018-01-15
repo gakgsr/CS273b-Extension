@@ -7,6 +7,7 @@ import numpy as np
 from math import ceil
 import utils
 import entropy
+import pandas as pd
 
 # Base location of all input data files
 data_dir = "/datadrive/project_data/"
@@ -77,15 +78,15 @@ class DatasetLoader(object):
         self.indelLocations = self.indelLocations - self.offset
       else:
         #self.indelLocationsFull = np.loadtxt(data_dir + "indelLocations{}".format(chromosome) + ext).astype(int)
-        indel_data_load = np.loadtxt(data_dir + "indelLocationsFiltered{}".format(chromosome) + ext).astype(int) # This is a 5 column data: indel locations, allele count, filter value, 50 window, and 20 window sequence complexity
-        self.indelLocationsFull = indel_data_load[:, 0] # Even non-filtered ones are a part of indelLocationsFull, so that we don't put these in the negative examples even by chance
-        total_indices = np.arange(indel_data_load.shape[0])
+        indel_data_load = pd.read_csv(data_dir + "indelLocationsFiltered" + str(chromosome) + ".txt", delimiter = ' ', header = None) # This is a 5 column data: indel locations, allele count, filter value, 50 window, and 20 window sequence complexity
+        self.indelLocationsFull = indel_data_load.iloc[:, 0].tolist() # Even non-filtered ones are a part of indelLocationsFull, so that we don't put these in the negative examples even by chance
+        total_indices = np.arange(len(self.indelLocationsFull))
         # Filter by sequence complexity around 20 sized window and complexity threshold
-        filtered_indices = np.logical_and(np.array(indel_load_data[:, 2] == 1) and np.array(indel_load_data[:, 4] >= self.complexity_threshold))
+        filtered_indices = np.logical_and(np.array(indel_load_data.iloc[:, 2] == 1) and np.array(indel_load_data.iloc[:, 4] >= self.complexity_threshold))
         filtered_indices = total_indices[filtered_indices]
         indel_indices = np.random.choice(filtered_indices, size=lengthIndels_per_chrom, replace=False)
-        self.indelLocations = indel_data_load[indel_indices, 0]
-        allele_count_val = indel_data_load[indel_indices, 1]
+        self.indelLocations = indel_data_load.iloc[indel_indices, 0]
+        allele_count_val = indel_data_load.iloc[indel_indices, 1]
         del indel_data_load, indel_indices, filtered_indices, total_indices
         self.indelLocations = self.indelLocations - self.offset
       self.nonzeroLocationsRef = np.where(np.any(self.referenceChr != 0, axis = 1))[0]
