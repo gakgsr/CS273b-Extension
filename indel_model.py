@@ -284,6 +284,7 @@ class IndelModel(object):
         testEntropy = entropy.entropySequence(self.loader.test_data[0])
         print predictions.shape, testLabels.shape, testEntropy.shape
         # TODO: Remove hardcoded image names (e.g. "CNN...")
+        # Modified TODO: Remove this function if it is no longer in use
         plt.hist(testEntropy[np.logical_and(testLabels == 1, predictions == 1)])
         plt.title('Histogram of sequence entropy for true positives')
         plt.savefig('CNNComplexityTruePositives.png')

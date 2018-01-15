@@ -1,4 +1,5 @@
 # TODO notes for Ananth: Add the recombination data
+# Also work on the nearby_indels feature
 import cs273b
 import load_coverage as lc
 import numpy as np
@@ -6,6 +7,7 @@ from math import ceil
 import utils
 import entropy
 import pandas as pd
+import time
 
 # Base location of all input data files
 data_dir = "/datadrive/project_data/"
@@ -118,6 +120,8 @@ class DatasetLoader(object):
       # Filter by sequence complexity and filter value around 20 sized window and complexity threshold
       total_indices = np.arange(len(indelLocationsFull))
       filtered_indices = np.logical_and(np.array(indel_data_load.iloc[:, 2] == 1), np.array(indel_data_load.iloc[:, 4] >= self.complexity_threshold))
+      # Add an additional filter for allele count = 1
+      filtered_indices = np.logical_and(np.array(indel_data_load.iloc[:, 1] == 1), filtered_indices)
 
       # Sample the indels, taking into consideration the classification problem in hand
       if self.triclass:
@@ -147,17 +151,21 @@ class DatasetLoader(object):
       nonzeroLocationsRef = np.where(np.any(referenceChr != 0, axis = 1))[0]
       # Sample a larger set from the non-Zero locations
       rel_size_neg_large = 2
+      time1 = time.time()
       neg_positions_large = np.random.choice(list(set(nonzeroLocationsRef) - set(indelLocationsFull)), size = rel_size_neg_large*num_negatives_per_chrom, replace = False)
       # Remove those that have complexity below the threshold
       neg_sequence_indices = np.arange(2*k_seq_complexity + 1) - k_seq_complexity
       neg_sequence_indices = np.repeat(neg_sequence_indices, len(neg_positions_large), axis = 0)
       neg_sequence_indices = np.reshape(neg_sequence_indices, [-1, len(neg_positions_large)])
       neg_sequence_indices += np.transpose(neg_positions_large)
-      neg_sequence_indices = np.reshape(neg_sequence_indices, [-1, len(neg_positions_large)])
-      neg_seq_large = referenceChr[neg_sequence_indices.transpose(), :]
-      neg_sequence_complexity = entropy.entropySequence(neg_seq_large)
+      #neg_sequence_indices = np.reshape(neg_sequence_indices, [-1, len(neg_positions_large)])
+      time2 = time.time()
+      neg_sequence_complexity = entropy.entropySequence(referenceChr[neg_sequence_indices.transpose(), :])
       neg_positions_large = neg_positions_large[neg_sequence_complexity >= self.complexity_threshold]
-      del neg_sequence_indices, neg_sequence_complexity, neg_seq_large
+      del neg_sequence_indices, neg_sequence_complexity
+      time3 = time.time()
+      print "Time to load neg_sequence_indices is {}".format(time2 - time1)
+      print "Time to compute neg_sequence_complexity is {}".format(time3 - time2)
       ##
       if self.nearby:
         # Create a list of all permissible nearby locations
@@ -172,7 +180,7 @@ class DatasetLoader(object):
           neg_positions = np.random.choice(nearby_locations, size = num_negatives_per_chrom, replace = False)
         else:
           # Else sample the remaining from the negative positions- this is the best that can be done, try increasing the nearby size
-          print "Try increasing nearby. Not enough nearby-non-indels could be sampled in chromosome {}".format(chromosome)
+          print "Try increasing nearby or rel_size_neg_large. Not enough nearby-non-indels could be sampled in chromosome {}".format(chromosome)
           num_neg_needed = num_negatives_per_chrom - len(nearby_locations)
           not_nearby = np.random.choice(list((set(neg_positions_large) - set(indelLocationsFull)) - set(nearby_locations)), size = num_neg_needed, replace = False)
           neg_positions = np.concatenate((nearby_locations, not_nearby))
@@ -225,7 +233,6 @@ class DatasetLoader(object):
     self.nearby_indels = nearby_indels
     self.genome_positions = genome_positions
     self.labels = labels
-    self.allele_count_test = self.allele_count[self.test_indices]
     del dataset, coverageDataset, entropyDataset, indices, allele_count, nearby_indels, genome_positions, labels
   def get_batch(self):
     return self.get_randbatch() # default: random batch
