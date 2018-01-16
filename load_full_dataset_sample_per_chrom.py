@@ -148,24 +148,17 @@ class DatasetLoader(object):
         coverage = lc.load_coverage(data_dir + "coverage/{}.npy".format(chromosome))
 
       ## Create the negative dataset
-      nonzeroLocationsRef = np.where(np.any(referenceChr != 0, axis = 1))[0]
-      # Sample a larger set from the non-Zero locations
       rel_size_neg_large = 2
-      time1 = time.time()
-      neg_positions_large = np.random.choice(list(set(nonzeroLocationsRef) - set(indelLocationsFull)), size = rel_size_neg_large*num_negatives_per_chrom, replace = False)
+      neg_positions_large = np.loadtxt(data_dir + "nonindelLocationsSampled" + str(chromosome) + '.txt').astype(int)
+      neg_positions_large = np.random.choice(neg_positions_large, size = rel_size_neg_large*num_negatives_per_chrom, replace = False)
       # Remove those that have complexity below the threshold
       neg_sequence_indices = np.arange(2*k_seq_complexity + 1) - k_seq_complexity
       neg_sequence_indices = np.repeat(neg_sequence_indices, len(neg_positions_large), axis = 0)
       neg_sequence_indices = np.reshape(neg_sequence_indices, [-1, len(neg_positions_large)])
       neg_sequence_indices += np.transpose(neg_positions_large)
-      #neg_sequence_indices = np.reshape(neg_sequence_indices, [-1, len(neg_positions_large)])
-      time2 = time.time()
       neg_sequence_complexity = entropy.entropySequence(referenceChr[neg_sequence_indices.transpose(), :])
       neg_positions_large = neg_positions_large[neg_sequence_complexity >= self.complexity_threshold]
       del neg_sequence_indices, neg_sequence_complexity
-      time3 = time.time()
-      print "Time to load neg_sequence_indices is {}".format(time2 - time1)
-      print "Time to compute neg_sequence_complexity is {}".format(time3 - time2)
       ##
       if self.nearby:
         # Create a list of all permissible nearby locations
