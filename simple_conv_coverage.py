@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import random
 import indel_model
-import load_dataset # See load_dataset script to observe how the training and test data is loaded
+#import load_dataset # See load_dataset script to observe how the training and test data is loaded
 import utils
 import load_full_dataset_sample_per_chrom
 
@@ -100,7 +100,7 @@ config = Config()
 #                                    batchSize=config.batch_size,
 #                                    testBatchSize=config.test_batch_size,
 #                                    seed=1, test_frac=0.025, pos_frac=0.5, load_coverage=True)
-loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, pos_frac=0.5, load_coverage=True, complexity_threshold=1.1)
+loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, pos_frac=0.5, load_coverage=True, complexity_threshold=0.9)
 
 conv_net = SimpleConvCoverage(config, loader, include_coverage = True, plotTrain=True)
 

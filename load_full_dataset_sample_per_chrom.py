@@ -70,7 +70,7 @@ class DatasetLoader(object):
     num_chrom_used = 21
     ##
     # Number of indels in the entire dataset used to train/test/val
-    lengthIndels = 20000*num_chrom_used
+    lengthIndels = 25000*num_chrom_used
     # Number of non-indels in the entire dataset
     num_negatives = int(int((1./frac_positives-1) * lengthIndels)/num_chrom_used)*num_chrom_used
     # Number of locations in the entire dataset
@@ -113,21 +113,27 @@ class DatasetLoader(object):
       # Load the chromosome from the full genome
       referenceChr = self.referenceChrFull[str(chromosome)]
       ## Load and process the positive (indels) dataset
-      # This is a 6 column data: indel locations, allele count, filter value, 50 window, and 20 window sequence complexity, insertion (1) or deletion (0)
-      indel_data_load = pd.read_csv(data_dir + "indelLocationsFiltered" + str(chromosome) + ".txt", delimiter = ' ', header = None)
-      # Even non-filtered ones are a part of indelLocationsFull, so that we don't put these in the negative examples even by chance
-      indelLocationsFull = np.array(indel_data_load.iloc[:, 0])
+      # This is a 4 column data: indel locations, allele count, filter value, insertion (1) or deletion (0)
+      indel_data_load = np.load(data_dir + "indelLocationsFiltered" + str(chromosome) + ".npy")
+      indel_data_load = indel_data_load[indel_data_load[:, 0] + k < referenceChr.shape[0]]
+      # Remove those that have complexity below the threshold
+      indel_sequence_indices = np.arange(2*k_seq_complexity + 1) - k_seq_complexity
+      indel_sequence_indices = np.repeat(indel_sequence_indices, indel_data_load.shape[0], axis = 0)
+      indel_sequence_indices = np.reshape(indel_sequence_indices, [-1, indel_data_load.shape[0]])
+      indel_sequence_indices += np.transpose(indel_data_load[:, 0])
+      indel_sequence_complexity = entropy.entropySequence(referenceChr[indel_sequence_indices.transpose(), :])
+      del indel_sequence_indices
       # Filter by sequence complexity and filter value around 20 sized window and complexity threshold
-      total_indices = np.arange(len(indelLocationsFull))
-      filtered_indices = np.logical_and(np.array(indel_data_load.iloc[:, 2] == 1), np.array(indel_data_load.iloc[:, 4] >= self.complexity_threshold))
+      total_indices = np.arange(indel_data_load.shape[0])
+      filtered_indices = np.logical_and(indel_data_load[:, 2] == 1, indel_sequence_complexity >= self.complexity_threshold)
       # Add an additional filter for allele count = 1
-      filtered_indices = np.logical_and(np.array(indel_data_load.iloc[:, 1] == 1), filtered_indices)
+      filtered_indices = np.logical_and(indel_data_load[:, 1] == 1, filtered_indices)
 
       # Sample the indels, taking into consideration the classification problem in hand
       if self.triclass:
-        filtered_indices_insert = np.logical_and(np.array(indel_data_load.iloc[:, 5] == 1), filtered_indices)
+        filtered_indices_insert = np.logical_and(indel_data_load.iloc[:, 3] == 1, filtered_indices)
         filtered_indices_insert = total_indices[filtered_indices_insert]
-        filtered_indices_delete = np.logical_and(np.array(indel_data_load.iloc[:, 5] == 0), filtered_indices)
+        filtered_indices_delete = np.logical_and(indel_data_load.iloc[:, 3] == 0, filtered_indices)
         filtered_indices_delete = total_indices[filtered_indices_delete]
         insertionLocations = np.random.choice(filtered_indices_insert, size = int(lengthIndels_per_chrom/2), replace = False)
         deletionLocations = np.random.choice(filtered_indices_delete, size = lengthIndels_per_chrom - int(lengthIndels_per_chrom/2), replace = False)
@@ -137,8 +143,8 @@ class DatasetLoader(object):
         filtered_indices = total_indices[filtered_indices]
         indel_indices = np.random.choice(filtered_indices, size = lengthIndels_per_chrom, replace = False)
       ##
-      indelLocations = np.array(indel_data_load.iloc[indel_indices, 0])
-      allele_count_val = np.array(indel_data_load.iloc[indel_indices, 1])
+      indelLocations = indel_data_load[indel_indices, 0]
+      allele_count_val = indel_data_load[indel_indices, 1]
       del indel_data_load, indel_indices, filtered_indices, total_indices
       indelLocations = indelLocations - self.offset
 
@@ -149,7 +155,7 @@ class DatasetLoader(object):
 
       ## Create the negative dataset
       rel_size_neg_large = 2
-      neg_positions_large = np.loadtxt(data_dir + "nonindelLocationsSampled" + str(chromosome) + '.txt').astype(int)
+      neg_positions_large = np.load(data_dir + "nonindelLocationsSampled" + str(chromosome) + '.npy')
       neg_positions_large = np.random.choice(neg_positions_large, size = rel_size_neg_large*num_negatives_per_chrom, replace = False)
       # Remove those that have complexity below the threshold
       neg_sequence_indices = np.arange(2*k_seq_complexity + 1) - k_seq_complexity
@@ -212,10 +218,11 @@ class DatasetLoader(object):
     # Randomly choose the validation and test chromosome
     self.val_chrom, self.test_chrom = np.random.choice(range(2, 23), 2, replace=False)
     # Set the number of training examples, and the respective set indices
+    total_indices = np.arange(total_length)
     self.num_train_examples = total_length_per_chrom*(num_chrom_used - 2)
-    self.train_indices = np.logical_and(chrom_num != self.val_chrom, chrom_num != self.test_chrom)
-    self.test_indices = np.array(chrom_num == self.test_chrom)
-    self.val_indices = np.array(chrom_num == self.val_chrom)
+    self.train_indices = total_indices[np.logical_and(chrom_num != self.val_chrom, chrom_num != self.test_chrom)]
+    self.test_indices = total_indices[chrom_num == self.test_chrom]
+    self.val_indices = total_indices[chrom_num == self.val_chrom]
     ##
     # Set the respective variables
     self.dataset = dataset
@@ -225,7 +232,10 @@ class DatasetLoader(object):
     self.allele_count = allele_count
     self.nearby_indels = nearby_indels
     self.genome_positions = genome_positions
-    self.labels = labels
+    if self.triclass:
+      self.labels = utils.to_onehot(labels, 3)
+    else:
+      self.labels = np.expand_dims(labels, axis=1) # Make labels n by 1 (for convenience)
     del dataset, coverageDataset, entropyDataset, indices, allele_count, nearby_indels, genome_positions, labels
   def get_batch(self):
     return self.get_randbatch() # default: random batch
@@ -235,6 +245,7 @@ class DatasetLoader(object):
     if batchSize == 0: batchSize = self.batchSize
     # Randomize the order of examples, if we are at the beginning of the next epoch
     if self.cur_index == 0:
+      np.random.shuffle(self.train_indices)
       np.random.shuffle(self.train_indices)
     start, end = self.cur_index, self.cur_index + batchSize
     batch_indices = self.train_indices[start : end] # Indices of the training examples that will make up the batch
@@ -253,13 +264,13 @@ class DatasetLoader(object):
 
   def __initializeTestData(self):
     self.test_data = [self.dataset[self.test_indices]]
+    print("Number of test examples: {}".format(len(self.test_data)))
     if self.load_coverage:
       self.test_data.append(self.coverageDataset[self.test_indices])
     if self.load_entropy:
       self.test_data.append(self.entropyDataset[self.test_indices])
     self.test_data.append(self.labels[self.test_indices])
     self.test_data = tuple(self.test_data)
-    print("Number of test examples: {}".format(len(self.test_indices)))
 
   # Total number of training batches based on given batch size.
   def num_trainbatches(self):
