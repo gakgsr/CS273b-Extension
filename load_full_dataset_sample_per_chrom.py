@@ -314,24 +314,20 @@ class DatasetLoader(object):
     return tuple(retval)
 
   #TODO Review the file from here
-  def load_chromosome_window_data(self):
-    chromosome = self.test_chrom
-    referenceChr = self.referenceChrFull[str(chromosome)]
-    if self.triclass:
-      self.insertionLocations = np.loadtxt(data_dir + "indelLocations{}_ins".format(chromosome) + ext).astype(int)
-      self.deletionLocations = np.loadtxt(data_dir + "indelLocations{}_del".format(chromosome) + ext).astype(int)
-      self.indelLocations = np.concatenate((self.insertionLocations, self.deletionLocations)) - self.offset
-    else:
-      indel_data_load = np.loadtxt(data_dir + "indelLocationsFiltered{}".format(chromosome) + ext).astype(int) # This is a 5 column data: indel locations, allele count, filter value, 50 window, and 20 window sequence complexity
-      indelLocationsFull = indel_data_load[:, 0] # Even non-filtered ones are a part of indelLocationsFull, so that we don't put these in the negative examples even by chance
-      total_indices = np.arange(indel_data_load.shape[0])
-      # Filter by sequence complexity around 20 sized window and complexity threshold
-      filtered_indices = np.logical_and(np.array(indel_load_data[:, 2] == 1) and np.array(indel_load_data[:, 4] >= self.complexity_threshold))
-      filtered_indices = total_indices[filtered_indices]
-      indel_indices = np.random.choice(filtered_indices, size=lengthIndels_per_chrom, replace=False)
-      self.indelLocations = indel_data_load[indel_indices, 0]
-      del indel_data_load, indel_indices, filtered_indices, total_indices
-      self.setOfIndelLocations = set(self.indelLocations)
+  def load_chromosome_window_data(self, chromosome):
+    self.referenceChr = self.referenceChrFull[str(chromosome)]
+    indel_data_load = np.load(data_dir + "indelLocationsFiltered" + str(chromosome) + ".npy")
+    total_indices = np.arange(indel_data_load.shape[0])
+    self.setOfIndelLocations = set(indel_data_load[:, 0])
+
+  def load_chromosome_window_batch_modified(self, window_size, batch_size):
+    lb = max(window_size, self.chrom_index) # we should probably instead pad with random values (actually may not be needed)
+    ub = min(len(self.referenceChr) - window_size, lb + batch_size) # ditto to above. also, ub is not inclusive
+    num_ex = ub - lb
+    X, Y = np.mgrid[lb - window_size : lb - window_size + num_ex, 0 : 2*window_size + 1]
+    self.chrom_index = ub
+    labels = [ex in self.setOfIndelLocations for ex in range(lb, ub)]
+    return referenceChr[X+Y, :], labels, range(lb, ub)
 
   def load_chromosome_window_batch(self, window_size, batch_size):
     lb = max(window_size, self.chrom_index) # we should probably instead pad with random values (actually may not be needed)
@@ -341,18 +337,3 @@ class DatasetLoader(object):
     self.chrom_index = ub
     labels = [ex in self.setOfIndelLocations for ex in range(lb, ub)]
     return referenceChr[X+Y, :], labels, lb, ub
-
-  def load_chromosome_window_batch_modified(self, window_size, batch_size):
-    lb = max(window_size, self.chrom_index) # we should probably instead pad with random values (actually may not be needed)
-    ub = min(len(referenceChr) - window_size, lb + batch_size) # ditto to above. also, ub is not inclusive
-    num_ex = ub - lb
-    X, Y = np.mgrid[lb - window_size : lb - window_size + num_ex, 0 : 2*window_size + 1]
-    self.chrom_index = ub
-    k = window_size
-    k_seq_complexity = 20
-    indelList = [x in self.setOfIndelLocations for x in range(lb, ub)]
-    seqDataset = referenceChr[X+Y, :]
-    complexity = entropy.entropySequence(seqDataset[:, k - k_seq_complexity : k + k_seq_complexity + 1, :])
-    indexList = [complexity[x - lb] >= self.complexity_threshold for x in range(lb, ub)]
-    seqDataset = seqDataset[indexList]
-    return seqDataset, indelList, indexList
