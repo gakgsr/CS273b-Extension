@@ -264,7 +264,7 @@ class DatasetLoader(object):
 
   def __initializeTestData(self):
     self.test_data = [self.dataset[self.test_indices]]
-    print("Number of test examples: {}".format(len(self.test_data)))
+    print("Number of test examples: {}".format(len(self.test_data[0])))
     if self.load_coverage:
       self.test_data.append(self.coverageDataset[self.test_indices])
     if self.load_entropy:
@@ -317,8 +317,7 @@ class DatasetLoader(object):
   def load_chromosome_window_data(self, chromosome):
     self.referenceChr = self.referenceChrFull[str(chromosome)]
     indel_data_load = np.load(data_dir + "indelLocationsFiltered" + str(chromosome) + ".npy")
-    total_indices = np.arange(indel_data_load.shape[0])
-    self.setOfIndelLocations = set(indel_data_load[:, 0])
+    self.setOfIndelLocations = set(indel_data_load[np.logical_and(indel_data_load[:, 2] == 1, indel_data_load[:, 1] == 1), 0])
 
   def load_chromosome_window_batch_modified(self, window_size, batch_size):
     lb = max(window_size, self.chrom_index) # we should probably instead pad with random values (actually may not be needed)
@@ -327,7 +326,7 @@ class DatasetLoader(object):
     X, Y = np.mgrid[lb - window_size : lb - window_size + num_ex, 0 : 2*window_size + 1]
     self.chrom_index = ub
     labels = [ex in self.setOfIndelLocations for ex in range(lb, ub)]
-    return referenceChr[X+Y, :], labels, range(lb, ub)
+    return self.referenceChr[X+Y, :], labels, range(lb, ub)
 
   def load_chromosome_window_batch(self, window_size, batch_size):
     lb = max(window_size, self.chrom_index) # we should probably instead pad with random values (actually may not be needed)
