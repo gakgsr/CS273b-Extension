@@ -29,6 +29,8 @@ small_window_size = 50
 
 arr1 = np.load("/datadrive/project_data/genomeIndelPredictionsValChrom.npy")
 arr2 = np.load("/datadrive/project_data/genomeIndelPredictionsTestChrom.npy")
+#arr1 = np.load("/datadrive/project_data/genomeIndelPredictionsValChromEntrpy.npy")
+#arr2 = np.load("/datadrive/project_data/genomeIndelPredictionsTestChromEntrpy.npy")
 
 
 bsize_val = [10000, 20000, 50000]
@@ -79,6 +81,7 @@ plt.plot(range(2000), arr1[2000:4000, 2])
 plt.plot(range(2000), arr1[2000:4000, 1], color='r')
 plt.title('Variation of predicted probabilities and true labels on validation chromosome')
 plt.savefig('var_pred_prob.png')
+#plt.savefig('var_pred_prob_entrpy.png')
 plt.clf()
 
 bsize = 10000
@@ -93,10 +96,11 @@ plt.scatter(results[0], results[1])
 plt.xlabel('True number of indels')
 plt.ylabel('Predicted number of indels without correction')
 plt.savefig('true_vs_pred.png')
+#plt.savefig('true_vs_pred_entrpy.png')
 plt.clf()
 
-plt.scatter(results[1], reg_pred)
-plt.xlabel('True number of indels')
-plt.ylabel('Predicted number of indels with correction')
-plt.savefig('true_vs_pred_corr.png')
-plt.clf()
+#plt.scatter(results[1], reg_pred)
+#plt.xlabel('True number of indels')
+#plt.ylabel('Predicted number of indels with correction')
+#plt.savefig('true_vs_pred_corr.png')
+#plt.clf()

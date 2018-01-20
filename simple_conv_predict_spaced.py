@@ -13,7 +13,7 @@ import utils
 class Config(object):
     """Holds model hyperparams and data information.
        Model objects are passed a Config() object at instantiation."""
-    window = 50
+    window = 20
     strlen = 2*window+1
     batch_size = 100
     test_batch_size = 500
@@ -71,7 +71,7 @@ config = Config()
 #loader = load_dataset.DatasetLoader(chromosome=chromosome, windowSize=config.window, #custom_load_dataset.DatasetLoader(chromosome=chromosome, windowSize=config.window,
 #                                    testBatchSize=config.test_batch_size,
 #                                    seed=1, test_frac=0.025, pos_frac=0.5, load_coverage=False, load_entire=True)
-loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, pos_frac=0.5, load_coverage=False, complexity_threshold = 0)
+loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, pos_frac=0.25, load_coverage=False, complexity_threshold = 0)
 
 chromosome = loader.test_chrom
 conv_net = SimpleConv(config, loader)
@@ -101,7 +101,7 @@ maxNumTest = 1000
 fullPreds = None
 realIndels = []
 indices = []
-for i in range(20000):#range(numBatches):
+for i in range(100000):#range(numBatches):
   X, indelList, indexList = loader.load_chromosome_window_batch_modified(window_size=config.window, batch_size=tb)
   if i % 1000 == 0:
     print('Batch {}'.format(i))
@@ -139,7 +139,7 @@ maxNumTest = 1000
 fullPreds = None
 realIndels = []
 indices = []
-for i in range(20000):#range(numBatches):
+for i in range(100000):#range(numBatches):
   X, indelList, indexList = loader.load_chromosome_window_batch_modified(window_size=config.window, batch_size=tb)
   if i % 1000 == 0:
     print('Batch {}'.format(i))

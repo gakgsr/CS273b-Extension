@@ -9,7 +9,7 @@ import utils
 class Config(object):
     """Holds model hyperparams and data information.
        Model objects are passed a Config() object at instantiation."""
-    window = 40
+    window = 20
     strlen = 2*window+1
     batch_size = 50
     test_batch_size = 200
@@ -69,7 +69,7 @@ config = Config()
 #                                    batchSize=config.batch_size,
 #                                    testBatchSize=config.test_batch_size,
 #                                    seed=1, test_frac=0.025, pos_frac=0.5, load_coverage=False)
-loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, pos_frac=0.5, load_coverage=False, complexity_threshold=1.2)
+loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, pos_frac=0.25, load_coverage=False, complexity_threshold=1.2)
 
 conv_net = SimpleConv(config, loader)
 

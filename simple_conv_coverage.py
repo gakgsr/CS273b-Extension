@@ -9,7 +9,7 @@ import load_full_dataset_sample_per_chrom
 class Config(object):
     """Holds model hyperparams and data information.
        Model objects are passed a Config() object at instantiation."""
-    window = 30
+    window = 20
     strlen = 2*window+1
     batch_size = 100
     test_batch_size = 500
@@ -100,7 +100,7 @@ config = Config()
 #                                    batchSize=config.batch_size,
 #                                    testBatchSize=config.test_batch_size,
 #                                    seed=1, test_frac=0.025, pos_frac=0.5, load_coverage=True)
-loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, pos_frac=0.5, load_coverage=True, complexity_threshold=0.9)
+loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, pos_frac=0.25, load_coverage=True, complexity_threshold=0.9)
 
 conv_net = SimpleConvCoverage(config, loader, include_coverage = True, plotTrain=True)
 

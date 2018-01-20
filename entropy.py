@@ -55,6 +55,7 @@ def logisticRegression(entropyStrings, labels, trainIndex, testIndex, testAC=Non
     testEntropy = entropyStrings[:, -1]
     testEntropy = entropyStrings[testIndex, -1]
     print_metrics_for_binned(testLabels, logRegPred, range(len(logRegPred)))
+    return logReg
     # Procedure to print model accuracy in different complexity bins
     # Not needed at the moment
     '''
