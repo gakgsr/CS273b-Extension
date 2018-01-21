@@ -100,7 +100,7 @@ config = Config()
 #                                    batchSize=config.batch_size,
 #                                    testBatchSize=config.test_batch_size,
 #                                    seed=1, test_frac=0.025, pos_frac=0.5, load_coverage=True)
-loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, pos_frac=0.25, load_coverage=True, complexity_threshold=0.9)
+loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, pos_frac=0.5, load_coverage=True, complexity_threshold=1.1)
 
 conv_net = SimpleConvCoverage(config, loader, include_coverage = True, plotTrain=True)
 
@@ -124,4 +124,5 @@ print("f1 score: %g" % conv_net.calc_f1(sess))
 conv_net.print_confusion_matrix(sess)
 
 conv_net.plot_val_accuracies('conv_val.png')'''
+conv_net.plot_freq_by_confusion(sess, 'CNNCoverage')
 conv_net.print_metrics(sess, 'conv', 'simple_conv_results.txt')

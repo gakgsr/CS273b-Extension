@@ -24,8 +24,8 @@ def process_predictions(arr, small_window, small_window_size, bsize):
     results[1].append(num_indels_pred)
   return results
 
-small_window = 2*50 + 1
-small_window_size = 50
+small_window = 2*20 + 1
+small_window_size = 20
 
 arr1 = np.load("/datadrive/project_data/genomeIndelPredictionsValChrom.npy")
 arr2 = np.load("/datadrive/project_data/genomeIndelPredictionsTestChrom.npy")

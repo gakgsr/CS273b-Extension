@@ -7,6 +7,7 @@ from sklearn import metrics
 import tensorflow as tf
 import utils
 import entropy
+import sequence_analysis
 
 class IndelModel(object):
     """Base model class for neural network indel classifiers."""
@@ -326,6 +327,17 @@ class IndelModel(object):
         print "PRAUC Score: %f" % metrics.average_precision_score(testLabels[validIndices], predictions[validIndices])
         print "Confusion Matrix:"
         print metrics.confusion_matrix(testLabels[validIndices], predictions[validIndices])
+
+    def plot_freq_by_confusion(self, sess, plotName):
+        predictions = self.predictions.round()
+        testLabels = self.loader.test_data[-1]
+        testAC = self.loader.allele_count_test
+        testLabels = utils.flatten(testLabels)
+        freq_2_mer_test = sequence_analysis.sequence_2_mer_generate(self.loader.test_data[0])
+        sequence_analysis.plot_seq_2_mer_freq(freq_2_mer_test[np.logical_and(testLabels == 1, predictions == 1)], plotName + 'true_positives')
+        sequence_analysis.plot_seq_2_mer_freq(freq_2_mer_test[np.logical_and(testLabels == 0, predictions == 1)], plotName + 'false_positives')
+        sequence_analysis.plot_seq_2_mer_freq(freq_2_mer_test[np.logical_and(testLabels == 0, predictions == 0)], plotName + 'true_negatives')
+        sequence_analysis.plot_seq_2_mer_freq(freq_2_mer_test[np.logical_and(testLabels == 1, predictions == 0)], plotName + 'false_negatives')
 
     def print_binned_accuracy(self, sess):
         predictions = self.predictions.round()

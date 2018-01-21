@@ -69,7 +69,7 @@ config = Config()
 #                                    batchSize=config.batch_size,
 #                                    testBatchSize=config.test_batch_size,
 #                                    seed=1, test_frac=0.025, pos_frac=0.5, load_coverage=False)
-loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, pos_frac=0.25, load_coverage=False, complexity_threshold=1.2)
+loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, pos_frac=0.5, load_coverage=False, complexity_threshold=1.1)
 
 conv_net = SimpleConv(config, loader)
 
@@ -80,4 +80,5 @@ all_results = conv_net.hard_examples(sess)
 hard_positives = [x for x in all_results if x[1]]
 #print(all_results[:100])
 #print(hard_positives[:100])'''
+conv_net.plot_freq_by_confusion(sess, 'SimpleCNN')
 conv_net.print_metrics(sess, 'conv', 'simple_conv_results.txt')

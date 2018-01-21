@@ -1,11 +1,8 @@
 import numpy as np
-#import random
-#import indel_model
 import load_full_dataset_sample_per_chrom
 import utils
-#from sklearn import linear_model
-#import sklearn.metrics
 import entropy
+import sequence_analysis
 
 class Config(object):
     """Holds model hyperparams and data information.
@@ -27,11 +24,15 @@ loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.wind
 datset = loader.dataset
 labls = utils.flatten(loader.labels)
 entropyMatrix = entropy.entropyVector(datset)
+freq_matrix = sequence_analysis.sequence_2_mer_generate(datset)
 print("Validation Chromosome: {}".format(loader.val_chrom))
 print("Test Chromosome: {}".format(loader.test_chrom))
-log_reg_model = entropy.logisticRegression(entropyMatrix, labls, loader.train_indices, loader.test_indices, testAC = loader.allele_count[loader.test_indices])
+print "Entropy Model"
+log_reg_model_entrpy = entropy.logisticRegression(entropyMatrix, labls, loader.train_indices, loader.test_indices, testAC = loader.allele_count[loader.test_indices])
+print "Frequency Model"
+log_reg_model_freq = sequence_analysis.logistic_regression_2_mer(freq_matrix, labls, loader.train_indices, loader.test_indices)
 
-
+'''
 loader.load_chromosome_window_data(loader.val_chrom)
 tb = 1000 # Test batch size
 numBatches = (len(loader.referenceChr) + tb - 1) // tb
@@ -87,3 +88,4 @@ for i in range(100000):#range(numBatches):
 # Save the results
 arr = np.concatenate((np.expand_dims(indices, axis=1), np.expand_dims(realIndels, axis=1), np.expand_dims(fullPreds, axis=1)), axis=1)
 np.save("/datadrive/project_data/genomeIndelPredictionsTestChromEntrpy.npy", arr)
+'''
