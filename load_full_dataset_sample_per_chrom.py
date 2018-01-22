@@ -7,7 +7,6 @@ from math import ceil
 import utils
 import entropy
 import pandas as pd
-import time
 
 # Base location of all input data files
 data_dir = "/datadrive/project_data/"
@@ -105,6 +104,9 @@ class DatasetLoader(object):
     genome_positions = np.zeros(total_length, dtype=np.uint32)
     # the chromosome number corresponding to each location
     chrom_num = np.zeros(total_length, dtype=np.uint32)
+    # Test the number of indels in a non-indel window, as well as multiple indel in a single indel window
+    num_indel_neg_set = 0
+    num_indel_pos_set = 0
 
     # Load data from chromosomes 2-22
     # populate dataset and related variables per chromosome
@@ -115,6 +117,7 @@ class DatasetLoader(object):
       ## Load and process the positive (indels) dataset
       # This is a 4 column data: indel locations, allele count, filter value, insertion (1) or deletion (0)
       indel_data_load = np.load(data_dir + "indelLocationsFiltered" + str(chromosome) + ".npy")
+      indel_indices_set = set(indel_data_load[:, 0])
       indel_data_load = indel_data_load[indel_data_load[:, 0] + k < referenceChr.shape[0]]
       # Remove those that have complexity below the threshold
       indel_sequence_indices = np.arange(2*k_seq_complexity + 1) - k_seq_complexity
@@ -196,17 +199,19 @@ class DatasetLoader(object):
             label = 2 # deletions will be labeled as 2
           pos = indelLocations[i]
           allele_count[total_length_per_chrom*(chromosome - 2) + i] = allele_count_val[i]
+          num_indel_pos_set += indel_indices_set & set(range(pos - k, pos + k + 1))
         else:
           label = 0
           pos = neg_positions[i - lengthIndels_per_chrom]
           # Compute the true value of nearby_indels TODO
           #if self.nearby:
+          num_indel_neg_set += indel_indices_set & set(range(pos - k, pos + k + 1))
         indices[total_length_per_chrom*(chromosome - 2) + i] = pos
         coverageWindow = np.zeros(2*k + 1)
         # get k base pairs before and after the position
         window = referenceChr[pos - k : pos + k + 1]
         if coverage is not None:
-          coverageWindow = utils.flatten(coverage[pos - k : pos + k + 1])
+          coverageWindow += np.mean(utils.flatten(coverage[pos - k : pos + k + 1])) #= utils.flatten(coverage[pos - k : pos + k + 1])
         dataset[total_length_per_chrom*(chromosome - 2) + i] = window
         coverageDataset[total_length_per_chrom*(chromosome - 2) + i] = coverageWindow
         labels[total_length_per_chrom*(chromosome - 2) + i] = label
@@ -237,6 +242,10 @@ class DatasetLoader(object):
     else:
       self.labels = np.expand_dims(labels, axis=1) # Make labels n by 1 (for convenience)
     del dataset, coverageDataset, entropyDataset, indices, allele_count, nearby_indels, genome_positions, labels
+    print num_indel_pos_set
+    print float(num_indel_pos_set)/lengthIndels
+    print num_indel_neg_set
+    print float(num_indel_neg_set)/num_negatives
   def get_batch(self):
     return self.get_randbatch() # default: random batch
 
@@ -304,6 +313,7 @@ class DatasetLoader(object):
 
   # Get the validation set
   def val_set(self, length=1000):
+  	np.random.shuffle(self.val_indices)
     val_indices = self.val_indices[:length]
     retval = [self.dataset[val_indices, :, :]]
     if self.load_coverage:
@@ -313,7 +323,6 @@ class DatasetLoader(object):
     retval.append(self.labels[val_indices])
     return tuple(retval)
 
-  #TODO Review the file from here
   def load_chromosome_window_data(self, chromosome):
     self.referenceChr = self.referenceChrFull[str(chromosome)]
     indel_data_load = np.load(data_dir + "indelLocationsFiltered" + str(chromosome) + ".npy")
