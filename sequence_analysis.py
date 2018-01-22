@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
+from sklearn import linear_model
+from sklearn import metrics
 
 def sequenceLogos(dataset, plotName):
     datasetShape = dataset.shape
@@ -36,16 +38,16 @@ def sequenceLogos(dataset, plotName):
     plt.clf()
 
 def sequence_2_mer_generate(dataset):
-    dataset_string_like = dataset[:, :, 0] + 2*dataset[:, :, 0] + 3*dataset[:, :, 0] + 4*dataset[:, :, 0]
+    dataset_string_like = dataset[:, :, 0] + 2*dataset[:, :, 1] + 3*dataset[:, :, 2] + 4*dataset[:, :, 3]
     total_indices = np.arange(dataset.shape[1])
     even_indices = total_indices%2 == 0
     odd_indices = total_indices%2 == 1
     if(dataset.shape[1] %2 == 0):
         dataset_2_mer_1 = dataset_string_like[:, odd_indices] + 5*dataset_string_like[:, even_indices]
-        dataset_2_mer_2 = 5*dataset_string_like[:, odd_indices[:-1]] + dataset_string_like[:, even_indices[1:]]
+        dataset_2_mer_2 = 5*dataset_string_like[:, np.append(odd_indices[:-1], np.array([False]))] + dataset_string_like[:, np.append(np.array([False]), even_indices[1:])]
     else:
-        dataset_2_mer_1 = dataset_string_like[:, odd_indices] + 5*dataset_string_like[:, even_indices[:-1]]
-        dataset_2_mer_2 = 5*dataset_string_like[:, odd_indices] + dataset_string_like[:, even_indices[1:]]
+        dataset_2_mer_1 = dataset_string_like[:, odd_indices] + 5*dataset_string_like[:, np.append(even_indices[:-1], np.array([False]))]
+        dataset_2_mer_2 = 5*dataset_string_like[:, odd_indices] + dataset_string_like[:, np.append(np.array([False]), even_indices[1:])]
     list_of_valid_words = [6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 21, 22, 23, 24]
     freq_2_mer = np.zeros((dataset.shape[0], len(list_of_valid_words)), dtype = float)
     for i in range(len(list_of_valid_words)):
@@ -58,19 +60,20 @@ def sequence_2_mer_generate(dataset):
                     count_of_2_mer += 1
                 else:
                     count_of_2_mer = 0
-                freq_2_mer[j, j0] = max(freq_2_mer[j, j0], count_of_2_mer)
+                freq_2_mer[j, i] = max(freq_2_mer[j, i], count_of_2_mer)
             count_of_2_mer = 0
             for j0 in range(dataset_2_mer_2_mod.shape[1]):
                 if(dataset_2_mer_2_mod[j, j0]):
                     count_of_2_mer += 1
                 else:
                     count_of_2_mer = 0
-                freq_2_mer[j, j0] = max(freq_2_mer[j, j0], count_of_2_mer)
+                freq_2_mer[j, i] = max(freq_2_mer[j, i], count_of_2_mer)
     return freq_2_mer, freq_2_mer/dataset.shape[1]
 
 def plot_seq_2_mer_freq(freq_val, plotName):
     freq_val = np.mean(freq_val, axis = 0)
-    list_of_valid_words = ['AA', 'AC', 'AG', 'AT', 'CA', 'CC', 'CG', 'CT', 'GA', 'GC', 'GG', 'GT', 'TA', 'TC', 'TG', 'TT']
+    #list_of_valid_words = ['AA', 'AC', 'AG', 'AT', 'CA', 'CC', 'CG', 'CT', 'GA', 'GC', 'GG', 'GT', 'TA', 'TC', 'TG', 'TT']
+    list_of_valid_words = [6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 21, 22, 23, 24]
     print freq_val
     plt.bar(list_of_valid_words, freq_val)
     plt.xlabel('2-mer')

@@ -80,5 +80,5 @@ all_results = conv_net.hard_examples(sess)
 hard_positives = [x for x in all_results if x[1]]
 #print(all_results[:100])
 #print(hard_positives[:100])'''
-conv_net.plot_freq_by_confusion(sess, 'SimpleCNN')
 conv_net.print_metrics(sess, 'conv', 'simple_conv_results.txt')
+conv_net.plot_freq_by_confusion(sess, 'SimpleCNN')

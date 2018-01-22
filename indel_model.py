@@ -331,9 +331,8 @@ class IndelModel(object):
     def plot_freq_by_confusion(self, sess, plotName):
         predictions = self.predictions.round()
         testLabels = self.loader.test_data[-1]
-        testAC = self.loader.allele_count_test
         testLabels = utils.flatten(testLabels)
-        freq_2_mer_test = sequence_analysis.sequence_2_mer_generate(self.loader.test_data[0])
+        freq_2_mer_count, freq_2_mer_test = sequence_analysis.sequence_2_mer_generate(self.loader.test_data[0])
         sequence_analysis.plot_seq_2_mer_freq(freq_2_mer_test[np.logical_and(testLabels == 1, predictions == 1)], plotName + 'true_positives')
         sequence_analysis.plot_seq_2_mer_freq(freq_2_mer_test[np.logical_and(testLabels == 0, predictions == 1)], plotName + 'false_positives')
         sequence_analysis.plot_seq_2_mer_freq(freq_2_mer_test[np.logical_and(testLabels == 0, predictions == 0)], plotName + 'true_negatives')
@@ -377,6 +376,7 @@ class IndelModel(object):
         f1 = self.calc_f1(sess)
         print("f1 score: %g" % f1)
         conf_str = self.print_confusion_matrix(sess)
+        '''
         self.plot_val_accuracies(plot_prefix + '_val.png')
         with open(output_stats_file, 'w') as f:
             f.write("Test accuracy: %g\n" % test_acc)
@@ -384,3 +384,4 @@ class IndelModel(object):
             f.write("PR AUC: %g\n" % auprc)
             f.write("f1 score: %g\n" % f1)
             f.write(conf_str + "\n")
+        '''

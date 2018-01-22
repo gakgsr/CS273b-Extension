@@ -124,5 +124,5 @@ print("f1 score: %g" % conv_net.calc_f1(sess))
 conv_net.print_confusion_matrix(sess)
 
 conv_net.plot_val_accuracies('conv_val.png')'''
-conv_net.plot_freq_by_confusion(sess, 'CNNCoverage')
 conv_net.print_metrics(sess, 'conv', 'simple_conv_results.txt')
+conv_net.plot_freq_by_confusion(sess, 'CNNCoverage')

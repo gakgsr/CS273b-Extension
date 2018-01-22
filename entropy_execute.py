@@ -19,12 +19,12 @@ class Config(object):
 
 
 config = Config()
-loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, load_coverage=False, complexity_threshold=0, pos_frac = 0.25)
+loader = load_full_dataset_sample_per_chrom.DatasetLoader(windowSize=config.window, batchSize=config.batch_size, testBatchSize=config.test_batch_size, seed=1, load_coverage=False, complexity_threshold=1.2, pos_frac = 0.5)
 
 datset = loader.dataset
 labls = utils.flatten(loader.labels)
 entropyMatrix = entropy.entropyVector(datset)
-freq_matrix = sequence_analysis.sequence_2_mer_generate(datset)
+freq_count, freq_matrix = sequence_analysis.sequence_2_mer_generate(datset)
 print("Validation Chromosome: {}".format(loader.val_chrom))
 print("Test Chromosome: {}".format(loader.test_chrom))
 print "Entropy Model"
