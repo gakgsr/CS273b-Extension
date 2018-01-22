@@ -54,5 +54,5 @@ for chromosome in range(1, 23):
   window_containing_indel = np.repeat(window_containing_indel, len(indel_indices), axis = 0)
   window_containing_indel = np.reshape(window_containing_indel, [-1, len(indel_indices)])
   window_containing_indel += np.transpose(indel_indices)
-  neg_positions_large = np.random.choice(list(set(nonzeroLocationsRef) - set(np.reshape(indel_indices, -1))), size = int(rel_size_neg_large*len(indel_indices)), replace = False)
+  neg_positions_large = np.random.choice(list(set(nonzeroLocationsRef) - set(np.reshape(window_containing_indel, -1))), size = int(rel_size_neg_large*len(indel_indices)), replace = False)
   np.save(filename_base_2 + str(chromosome) + '.npy', neg_positions_large)

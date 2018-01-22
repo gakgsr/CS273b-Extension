@@ -246,8 +246,8 @@ class DatasetLoader(object):
     print float(num_indel_pos_set)/lengthIndels
     print num_indel_neg_set
     print float(num_indel_neg_set)/num_negatives
-    print np.mean(np.mean(coverageDataset, axis = 1))
-    print np.mean(np.var(coverageDataset, axis = 1))
+    print np.mean(np.mean(self.coverageDataset, axis = 1))
+    print np.mean(np.var(self.coverageDataset, axis = 1))
 
   def get_batch(self):
     return self.get_randbatch() # default: random batch
