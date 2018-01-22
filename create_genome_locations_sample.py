@@ -49,5 +49,10 @@ for chromosome in range(1, 23):
   # Sample and save a set of strict non-indels
   nonzeroLocationsRef = np.where(np.any(reference_chrom != 0, axis = 1))[0]
   rel_size_neg_large = 1.5
-  neg_positions_large = np.random.choice(list(set(nonzeroLocationsRef) - set(indel_indices)), size = int(rel_size_neg_large*len(indel_indices)), replace = False)
+  # Remove positions that have any indels around their window
+  window_containing_indel = np.arange(2*window1 + 1) - window1
+  window_containing_indel = np.repeat(window_containing_indel, len(indel_indices), axis = 0)
+  window_containing_indel = np.reshape(window_containing_indel, [-1, len(indel_indices)])
+  window_containing_indel += np.transpose(indel_indices)
+  neg_positions_large = np.random.choice(list(set(nonzeroLocationsRef) - set(np.reshape(indel_indices, -1))), size = int(rel_size_neg_large*len(indel_indices)), replace = False)
   np.save(filename_base_2 + str(chromosome) + '.npy', neg_positions_large)

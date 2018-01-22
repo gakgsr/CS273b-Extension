@@ -15,7 +15,7 @@ class Config(object):
     test_batch_size = 500
     lr = 1e-4
     dropout_prob = 0.5
-    num_epochs = 6
+    num_epochs = 5
     print_every = 100 # print accuracy every 100 steps
 
 class SimpleConvCoverage(indel_model.IndelModel):

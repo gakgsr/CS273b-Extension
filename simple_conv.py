@@ -11,7 +11,7 @@ class Config(object):
        Model objects are passed a Config() object at instantiation."""
     window = 20
     strlen = 2*window+1
-    batch_size = 50
+    batch_size = 100
     test_batch_size = 200
     lr = 1e-4
     dropout_prob = 0.5

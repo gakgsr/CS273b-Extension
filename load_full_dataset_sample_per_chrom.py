@@ -211,7 +211,7 @@ class DatasetLoader(object):
         # get k base pairs before and after the position
         window = referenceChr[pos - k : pos + k + 1]
         if coverage is not None:
-          coverageWindow += np.mean(utils.flatten(coverage[pos - k : pos + k + 1])) #= utils.flatten(coverage[pos - k : pos + k + 1])
+          coverageWindow = utils.flatten(coverage[pos - k : pos + k + 1])#+= np.mean(utils.flatten(coverage[pos - k : pos + k + 1]))
         dataset[total_length_per_chrom*(chromosome - 2) + i] = window
         coverageDataset[total_length_per_chrom*(chromosome - 2) + i] = coverageWindow
         labels[total_length_per_chrom*(chromosome - 2) + i] = label
@@ -246,6 +246,9 @@ class DatasetLoader(object):
     print float(num_indel_pos_set)/lengthIndels
     print num_indel_neg_set
     print float(num_indel_neg_set)/num_negatives
+    print np.mean(np.mean(coverageDataset, axis = 1))
+    print np.mean(np.var(coverageDataset, axis = 1))
+
   def get_batch(self):
     return self.get_randbatch() # default: random batch
 
