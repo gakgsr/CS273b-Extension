@@ -199,13 +199,13 @@ class DatasetLoader(object):
             label = 2 # deletions will be labeled as 2
           pos = indelLocations[i]
           allele_count[total_length_per_chrom*(chromosome - 2) + i] = allele_count_val[i]
-          num_indel_pos_set += indel_indices_set & set(range(pos - k, pos + k + 1))
+          num_indel_pos_set += len(indel_indices_set & set(range(pos - k, pos + k + 1)))
         else:
           label = 0
           pos = neg_positions[i - lengthIndels_per_chrom]
           # Compute the true value of nearby_indels TODO
           #if self.nearby:
-          num_indel_neg_set += indel_indices_set & set(range(pos - k, pos + k + 1))
+          num_indel_neg_set += len(indel_indices_set & set(range(pos - k, pos + k + 1)))
         indices[total_length_per_chrom*(chromosome - 2) + i] = pos
         coverageWindow = np.zeros(2*k + 1)
         # get k base pairs before and after the position
@@ -313,7 +313,7 @@ class DatasetLoader(object):
 
   # Get the validation set
   def val_set(self, length=1000):
-  	np.random.shuffle(self.val_indices)
+    np.random.shuffle(self.val_indices)
     val_indices = self.val_indices[:length]
     retval = [self.dataset[val_indices, :, :]]
     if self.load_coverage:
