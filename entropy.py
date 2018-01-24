@@ -36,8 +36,8 @@ def entropyVector(sequenceStrings):
 def print_metrics_for_binned(testLabels, predictions, validIndices):
     print "Accuracy Score: %f" % metrics.accuracy_score(testLabels[validIndices], predictions[validIndices])
     print "F1 Score: %f" % metrics.f1_score(testLabels[validIndices], predictions[validIndices])
-    print "ROCAUC Score: %f" % metrics.roc_auc_score(testLabels[validIndices], predictions[validIndices])
     fpr, tpr, thresholds = metrics.roc_curve(testLabels[validIndices], predictions[validIndices])
+    print "ROCAUC Score: %f" % metrics.auc(fpr, tpr)
     print "PRAUC Score: %f" % metrics.average_precision_score(testLabels[validIndices], predictions[validIndices])
     print "Confusion Matrix:"
     print metrics.confusion_matrix(testLabels[validIndices], predictions[validIndices])

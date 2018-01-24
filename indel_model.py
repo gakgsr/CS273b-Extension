@@ -332,11 +332,21 @@ class IndelModel(object):
         predictions = self.predictions.round()
         testLabels = self.loader.test_data[-1]
         testLabels = utils.flatten(testLabels)
+        test_data_used = self.loader.test_data[0]
         freq_2_mer_count, freq_2_mer_test = sequence_analysis.sequence_2_mer_generate(self.loader.test_data[0])
         sequence_analysis.plot_seq_2_mer_freq(freq_2_mer_test[np.logical_and(testLabels == 1, predictions == 1)], plotName + 'true_positives')
         sequence_analysis.plot_seq_2_mer_freq(freq_2_mer_test[np.logical_and(testLabels == 0, predictions == 1)], plotName + 'false_positives')
         sequence_analysis.plot_seq_2_mer_freq(freq_2_mer_test[np.logical_and(testLabels == 0, predictions == 0)], plotName + 'true_negatives')
         sequence_analysis.plot_seq_2_mer_freq(freq_2_mer_test[np.logical_and(testLabels == 1, predictions == 0)], plotName + 'false_negatives')
+        sequence_analysis.sequenceLogos(test_data_used[np.logical_and(testLabels == 1, predictions == 1)], plotName + 'true_positives')
+        sequence_analysis.sequenceLogos(test_data_used[np.logical_and(testLabels == 0, predictions == 1)], plotName + 'false_positives')
+        sequence_analysis.sequenceLogos(test_data_used[np.logical_and(testLabels == 0, predictions == 0)], plotName + 'true_negatives')
+        sequence_analysis.sequenceLogos(test_data_used[np.logical_and(testLabels == 1, predictions == 0)], plotName + 'false_negatives')
+        coverage_test_data = self.loader.test_data[1]
+        print "True positives coverage average is {}".format(np.mean(coverage_test_data[np.logical_and(testLabels == 1, predictions == 1)]))
+        print "False positives coverage average is {}".format(np.mean(coverage_test_data[np.logical_and(testLabels == 0, predictions == 0)]))
+        print "True negatives coverage average is {}".format(np.mean(coverage_test_data[np.logical_and(testLabels == 0, predictions == 0)]))
+        print "False negatives coverage average is {}".format(np.mean(coverage_test_data[np.logical_and(testLabels == 1, predictions == 0)]))
 
     def print_binned_accuracy(self, sess):
         predictions = self.predictions.round()
