@@ -93,26 +93,18 @@ conv_net.print_confusion_matrix(sess)
 loader.load_chromosome_window_data(loader.val_chrom)
 tb = 1000 # Test batch size
 numBatches = (len(loader.referenceChr) + tb - 1) // tb
-predNums = [0]*numBatches
 print('{} batches'.format(numBatches))
 
-numTest = 0
-maxNumTest = 1000
 fullPreds = None
 realIndels = []
 indices = []
-for i in range(20000):#range(numBatches):
+for i in range(25000):#range(numBatches):
   X, indelList, indexList = loader.load_chromosome_window_batch_modified(window_size=config.window, batch_size=tb)
   if i % 1000 == 0:
     print('Batch {}'.format(i))
   if np.sum(X) == 0: # No indels in the entire bucket. Skip for brevity
     continue
   preds = utils.flatten(conv_net.predict(sess, X))
-  sumpreds = sum(preds.round()) # Sum of predicted probabilities for the current window
-  predNums[i] = sumpreds
-  numTest += 1
-  #if numTest > maxNumTest: break # To truncate the program and predict on just a subset of the chromosome.
-  #indelList = [x in loader.setOfIndelLocations for x in range(lb, ub)] # Whether each x in [lb, ub) is an indel or not.
   if fullPreds is None:
     fullPreds = utils.flatten(preds)
   else:
@@ -131,26 +123,18 @@ np.save("/datadrive/project_data/genomeIndelPredictionsValChrom.npy", arr)
 loader.load_chromosome_window_data(loader.test_chrom)
 tb = 1000 # Test batch size
 numBatches = (len(loader.referenceChr) + tb - 1) // tb
-predNums = [0]*numBatches
 print('{} batches'.format(numBatches))
 
-numTest = 0
-maxNumTest = 1000
 fullPreds = None
 realIndels = []
 indices = []
-for i in range(20000):#range(numBatches):
+for i in range(25000):#range(numBatches):
   X, indelList, indexList = loader.load_chromosome_window_batch_modified(window_size=config.window, batch_size=tb)
   if i % 1000 == 0:
     print('Batch {}'.format(i))
   if np.sum(X) == 0: # No indels in the entire bucket. Skip for brevity
     continue
   preds = utils.flatten(conv_net.predict(sess, X))
-  sumpreds = sum(preds.round()) # Sum of predicted probabilities for the current window
-  predNums[i] = sumpreds
-  numTest += 1
-  #if numTest > maxNumTest: break # To truncate the program and predict on just a subset of the chromosome.
-  #indelList = [x in loader.setOfIndelLocations for x in range(lb, ub)] # Whether each x in [lb, ub) is an indel or not.
   if fullPreds is None:
     fullPreds = utils.flatten(preds)
   else:
