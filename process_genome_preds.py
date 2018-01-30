@@ -12,7 +12,6 @@ print('Loaded true and predicted indel locations') # arr[:,1] and arr[:,2], resp
 
 bsize = 10000 # Size of the buckets that we aggregate predictions over
 arr2 = np.array_split(arr[:(len(arr)//bsize)*bsize], len(arr)//bsize) # split the first part, with a size divisible by bsize
-if len(arr) % bsize != 0: arr2.append(arr[(len(arr)//bsize)*bsize:]) # tack on the last piece
 
 thresh = 0.8 # Threshold above which an example is declared to be an indel (if we are thresholding rather than summing probabilities). Set higher since the classes are heavily imbalanced.
 avg_sum = 0
