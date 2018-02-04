@@ -11,9 +11,9 @@ from sklearn import linear_model
 
 def process_predictions(arr, small_window, small_window_size, bsize):
   arr3 = np.array_split(arr[:(len(arr)//bsize)*bsize], len(arr)//bsize) # split the first part, with a size divisible by bsize
-  #arr2.append(arr[(len(arr)//bsize)*bsize:]) # tack on the last piece
+  arr3.append(arr[(len(arr)//bsize)*bsize:]) # tack on the last piece
 
-  thresh = 0.5 # Threshold above which an example is declared to be an indel
+  thresh = 0.8 # Threshold above which an example is declared to be an indel
 
   results = [[], []]
 
@@ -22,9 +22,6 @@ def process_predictions(arr, small_window, small_window_size, bsize):
     num_indels_pred = np.sum(window[window[:, 0]%small_window == small_window_size, 2] > thresh) # Predicted number of indels in the bucket, using thresholding
     results[0].append(num_indels_true)
     results[1].append(num_indels_pred)
-    avg_acc += metrics.accuracy_score(window[:, 1], window[:, 2].round())
-  avg_acc /= len(arr3)
-  print "Average accuracy for bsize %d is %f" % (bsize, avg_acc)
 
   '''
   adjacent_corr = []
