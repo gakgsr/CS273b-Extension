@@ -44,7 +44,7 @@ for i in range(2,23):
   # Filter by sequence complexity and filter value around 20 sized window and complexity threshold
   indelLocations = indel_data_load[indel_data_load[:, 2] == 1, 0] - 1
 
-  num_buckets = min(5000, c_len//bsize)
+  num_buckets = c_len//bsize
   num_indels_ch = [0]*num_buckets
   for il in indelLocations:
     if il//bsize >= num_buckets: break
@@ -80,9 +80,8 @@ model = Sequential()
 # Convolutional layer
 model.add(Conv1D(10, kernel_size=5, activation='relu', input_shape=(bsize, 4)))#, kernel_regularizer=l2(0.0001)))
 model.add(Flatten())
-# FC hidden layers
+# FC hidden layer
 model.add(Dense(500, activation='relu'))#, kernel_regularizer=l2(0.01)))
-model.add(Dense(200, activation='relu'))
 # Output layer. ReLU activation because we are trying to predict a nonnegative value!
 model.add(Dense(1, activation = 'relu'))
 
@@ -102,11 +101,10 @@ ytestout = utils.flatten(model.predict(x_test, batch_size = 10, verbose = 1))
 
 # Compute the correlation between the test set predictions and the true values
 r, p = stats.pearsonr(y_test, ytestout)
-print "\nMetrics of the model for bin size %d" % bsize
+print "\nMetrics of the model"
 print(r)
 print(p)
 print metrics.mean_squared_error(y_test, ytestout)
-print metrics.mean_absolute_error(y_test, ytestout)
 
 # Scatterplot of predicted vs. true values
 plt.scatter(y_test, ytestout)
@@ -114,4 +112,4 @@ plt.xlabel('True number of indels')
 plt.ylabel('Predicted number of indels')
 plt.title('Predicted vs. actual indel mutation rates ($r = {:.2f}'.format(r) + ', p < 10^{-10}$)')
 plt.plot(y_test, y_test, color='m', linewidth=2.5)
-plt.savefig('indel_rate_pred_full_chrom' + str(bsize) + '.png')
+plt.savefig('indel_rate_pred_full_chrom.png')

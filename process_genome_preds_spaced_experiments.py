@@ -13,7 +13,7 @@ def process_predictions(arr, small_window, small_window_size, bsize):
   arr3 = np.array_split(arr[:(len(arr)//bsize)*bsize], len(arr)//bsize) # split the first part, with a size divisible by bsize
   arr3.append(arr[(len(arr)//bsize)*bsize:]) # tack on the last piece
 
-  thresh = 0.8 # Threshold above which an example is declared to be an indel
+  thresh = 0.5 # Threshold above which an example is declared to be an indel
 
   results = [[], []]
 
@@ -23,19 +23,24 @@ def process_predictions(arr, small_window, small_window_size, bsize):
     results[0].append(num_indels_true)
     results[1].append(num_indels_pred)
 
-  '''
   adjacent_corr = []
+  adjacent_corr1 = []
   for i in range(len(arr3) - 1):
     window1 = arr3[i]
     window2 = arr3[i+1]
-    r, p = stats.pearsonr(window1[:, 2], window2[:, 2])
+    r, p = stats.pearsonr(window1[:, 2].round() - window1[:, 1], window2[:, 2].round() - window2[:, 1])
     adjacent_corr.append(r)
+    r, p = stats.pearsonr(window1[:, 2] - window1[:, 1], window2[:, 2] - window2[:, 1])
+    adjacent_corr1.append(r)
 
   plt.hist(adjacent_corr)
   plt.title('Histogram of correlation values for adjacent bins of size {}'.format(bsize))
-  plt.savefig('hist_adj_corr_{}.png'.format(bsize))
+  plt.savefig('hist_adj_corr_err_rnd_{}.png'.format(bsize))
   plt.clf()
-  '''
+  plt.hist(adjacent_corr1)
+  plt.title('Histogram of correlation values for adjacent bins of size {}'.format(bsize))
+  plt.savefig('hist_adj_corr_err_{}.png'.format(bsize))
+  plt.clf()
 
   return results
 
@@ -54,8 +59,8 @@ for bsize in bsize_val:
   print "Adjacent non-overlapping window"
   results = process_predictions(arr1, small_window, small_window_size, bsize)
 
-  print "On the validation set"
-  print stats.pearsonr(results[0], results[1]) # Compute correlation between the model predictions from the above process, and the true values
+  #print "On the validation set"
+  #print stats.pearsonr(results[0], results[1]) # Compute correlation between the model predictions from the above process, and the true values
 
   # Linearly rescale predicted values to match true test labels, since we didn't sum over all locations
   regr = linear_model.LinearRegression()
@@ -67,26 +72,27 @@ for bsize in bsize_val:
 
   print "On the test set"
   print stats.pearsonr(results[1], reg_pred) # Compute correlation between the model predictions from the above process, and the true values
-  print stats.pearsonr(results[1], results[0])
-  print stats.pearsonr(results[1][2:150], reg_pred[2:150])
-  print stats.pearsonr(results[1][2:150], results[0][2:150])
+  #print stats.pearsonr(results[1], results[0])
+  #print stats.pearsonr(results[1][2:150], reg_pred[2:150])
+  #print stats.pearsonr(results[1][2:150], results[0][2:150])
   print metrics.mean_squared_error(results[1], results[0])
-  print metrics.mean_squared_error(results[1][2:150], results[0][2:150])
+  print metrics.mean_absolute_error(results[1], results[0])
+  '''
   plt.hist(results[1])
   plt.title('Histogram of predicted indels in bin size {}'.format(bsize))
   plt.savefig('hist_pred_indel_spaced_{}.png'.format(bsize))
   plt.clf()
-
   plt.hist(results[0])
   plt.title('Histogram of true indels in bin size {}'.format(bsize))
   plt.savefig('hist_true_indel_spaced_{}.png'.format(bsize))
   plt.clf()
+  '''
 
   print "All locations"
   results = process_predictions(arr1, 1, 0, bsize)
 
-  print "On the validation set"
-  print stats.pearsonr(results[0], results[1]) # Compute correlation between the model predictions from the above process, and the true values
+  #print "On the validation set"
+  #print stats.pearsonr(results[0], results[1]) # Compute correlation between the model predictions from the above process, and the true values
 
   # Linearly rescale predicted values to match true test labels, since we didn't sum over all locations
   regr = linear_model.LinearRegression()
@@ -97,20 +103,21 @@ for bsize in bsize_val:
 
   print "On the test set"
   print stats.pearsonr(results[1], reg_pred) # Compute correlation between the model predictions from the above process, and the true values
-  print stats.pearsonr(results[1], results[0])
-  print stats.pearsonr(results[1][2:150], reg_pred[2:150])
-  print stats.pearsonr(results[1][2:150], results[0][2:150])
+  #print stats.pearsonr(results[1], results[0])
+  #print stats.pearsonr(results[1][2:150], reg_pred[2:150])
+  #print stats.pearsonr(results[1][2:150], results[0][2:150])
   print metrics.mean_squared_error(results[1], results[0])
-  print metrics.mean_squared_error(results[1][2:150], results[0][2:150])
+  print metrics.mean_absolute_error(results[1], results[0])
+  '''
   plt.hist(results[1])
   plt.title('Histogram of predicted indels in bin size {}'.format(bsize))
   plt.savefig('hist_pred_indel_{}.png'.format(bsize))
   plt.clf()
-
   plt.hist(results[0])
   plt.title('Histogram of true indels in bin size {}'.format(bsize))
   plt.savefig('hist_true_indel_{}.png'.format(bsize))
   plt.clf()
+  '''
 
 '''
 plt.plot(range(2000), arr1[2000:4000, 2])
