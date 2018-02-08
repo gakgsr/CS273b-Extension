@@ -128,16 +128,17 @@ for i in range(len(y_test)//windows_per_bin):
 bin_preds, bin_trues = np.array(bin_preds), np.array(bin_trues)
 
 mae = np.mean(np.abs(bin_preds - bin_trues))
-mse = np.mean(np.square(bin_preds - bin_trues))
+rms = np.sqrt(np.mean(np.square(bin_preds - bin_trues)))
 r_bin, p_bin = stats.pearsonr(bin_trues, bin_preds)
 avg_pred = np.mean(bin_preds)
 avg_true = np.mean(bin_trues)
 
-print('Bin size: {}, MAE: {}, MSE: {}, r: {}, p: {}, average indels predicted: {}, average indels actual: {}'.format(windows_per_bin*window_size, mae, mse, r_bin, p_bin, avg_pred, avg_true))
+print('Bin size: {}, MAE: {}, RMS error: {}, r: {}, p-value: {}, average indels predicted: {}, average indels actual: {}'.format(windows_per_bin*window_size, mae, rms, r_bin, p_bin, avg_pred, avg_true))
 
 plt.scatter(bin_trues, bin_preds)
 plt.xlabel('True number of indels')
 plt.ylabel('Predicted number of indels')
 plt.title('Predicted vs. actual indel mutation counts ($r = {:.2f}'.format(r) + (', p =$ {:.2g})'.format(p) if p else ', p < 10^{-15})$'))
-plt.plot(y_test, y_test, color='m', linewidth=2.5)
+line_x = np.arange(min(np.amax(bin_preds), np.amax(bin_trues)))
+plt.plot(line_x, line_x, color='m', linewidth=2.5)
 plt.savefig('indel_rate_pred_keras.png')
