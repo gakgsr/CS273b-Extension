@@ -18,13 +18,15 @@ data_dir = '/datadrive/project_data/'
 reference, ambiguous_bases = cs273b.load_bitpacked_reference(data_dir + "Homo_sapiens_assembly19.fasta.bp")
 del ambiguous_bases
 
+# TODO: Can augment training set with overlapping windows (i.e. starting at random positions)
 forbidden_chroms = [1, 2]
 validation_chrom = 5#np.random.choice(20) + 3
 k = 200
 window_size = 2*k+1
 windows_per_bin = 50
+margin = 15
+expanded_window_size = window_size + 2*margin
 batch_size = 50
-#margin = 15
 num_train_ex = 250000
 epochs = 12
 
@@ -40,23 +42,28 @@ for i in range(4,6):#(1, 24):
   print('Processing ' + ch)
   referenceChr = reference[ch]
   c_len = len(referenceChr) # Total chromosome length
-  num_buckets = c_len//window_size
-  num_indels_ch = [0]*num_buckets # True number of indels in each bucket
+  num_windows = (c_len-2*margin)//window_size
+  num_indels_ch = [0]*num_windows # True number of indels in each window
 
   insertionLocations = np.loadtxt(data_dir + "indelLocations{}_ins.txt".format(ch)).astype(int)
   deletionLocations = np.loadtxt(data_dir + "indelLocations{}_del.txt".format(ch)).astype(int)
   indelLocations = np.concatenate((insertionLocations, deletionLocations)) - 1
 
   for il in indelLocations:
-    if il//window_size >= len(num_indels_ch): break
+    if il < margin: continue
+    if il >= num_windows*window_size: break
     num_indels_ch[il // window_size] += 1
-  
+
   if i == validation_chrom:
     num_indels_val = num_indels_ch
   else:
     num_indels.extend(num_indels_ch)
   del num_indels_ch, insertionLocations, deletionLocations, indelLocations # Preserve memory
-  seq_ch = np.array_split(referenceChr[:num_buckets*window_size], num_buckets) # Discard the last chunk of the chromosome, if it is smaller than a normal bucket
+  seq_ch = []
+  for w in range(num_windows):
+    # First window predictions start at index margin, but we include sequence context of length 'margin' around it, so its input array starts at index 0
+    window_lb, window_ub = w*window_size, (w+1)*window_size + 2*margin # Include additional sequence context of length 'margin' around each window
+    seq_ch.append(referenceChr[window_lb:window_ub])
   if i == validation_chrom:
     seq_val = seq_ch
   else:
@@ -67,8 +74,8 @@ del reference, referenceChr
 
 order = [x for x in range(len(seq))]
 random.shuffle(order)
-seq = np.array([seq[i] for i in order])
-num_indels = np.array([num_indels[i] for i in order]) # Shuffle the buckets data, so we can easily choose a random subset for testing
+seq = np.array([seq[i] for i in order]) # Shuffle the training data, so we can easily choose a random subset for testing
+num_indels = np.array([num_indels[i] for i in order])
 
 x_train = np.array(seq[:num_train_ex])
 y_train = np.array(num_indels[:num_train_ex])
@@ -83,16 +90,17 @@ from keras.layers import Conv1D, Dense, Flatten, Dropout
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Sequential
 
-activation='relu' # make linear to enable advanced activations
+use_lrelu = False
+activation = 'linear' if use_lrelu else 'relu' # make linear to enable advanced activations
 
 model = Sequential()
-model.add(Conv1D(40, kernel_size=5, activation=activation, input_shape=(window_size, 4)))#, kernel_regularizer=l2(0.0001))) # Convolutional layer
-#model.add(LeakyReLU(alpha=0.1))
+model.add(Conv1D(40, kernel_size=5, activation=activation, input_shape=(expanded_window_size, 4)))#, kernel_regularizer=l2(0.0001))) # Convolutional layer
+if use_lrelu: model.add(LeakyReLU(alpha=0.1))
 model.add(Conv1D(100, kernel_size=8, activation=activation))
-#model.add(LeakyReLU(alpha=0.1))
+if use_lrelu: model.add(LeakyReLU(alpha=0.1))
 model.add(Flatten())
 model.add(Dense(1024, activation=activation))#, kernel_regularizer=l2(0.01))) # FC hidden layer
-#model.add(LeakyReLU(alpha=0.1))
+if use_lrelu: model.add(LeakyReLU(alpha=0.1))
 model.add(Dense(1, activation='relu')) # Output layer. ReLU activation because we are trying to predict a nonnegative value!
 
 model.compile(loss=keras.losses.mean_squared_error,
