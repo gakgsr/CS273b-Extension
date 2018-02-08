@@ -73,7 +73,7 @@ model.add(Dense(1, activation='relu')) # Output layer. ReLU activation because w
 
 model.compile(loss=keras.losses.mean_squared_error,
               optimizer=keras.optimizers.Adam(),
-              metrics=['mae']) # Minimize the MSE. Also report mean absolute error
+              metrics=['mse', 'mae']) # Minimize the MSE. Also report mean absolute error
 
 batch_size = 5 # Need to use small batch size when buckets are very large, due to memory limitations
 model.fit(x_train, y_train,

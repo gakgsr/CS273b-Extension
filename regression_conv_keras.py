@@ -1,0 +1,143 @@
+'''Splits the selected chromosomes into contiguous "buckets" of a specified size and directly attempts to predict the number of
+   indel mutations within each bucket. Uses a very simple convolutional layer followed by two fully-connected layers'''
+
+# TODO: Compare correlation with that of random selected examples
+
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
+
+import tensorflow as tf
+import numpy as np
+import random
+from sys import argv
+import utils
+import cs273b
+
+data_dir = '/datadrive/project_data/'
+reference, ambiguous_bases = cs273b.load_bitpacked_reference(data_dir + "Homo_sapiens_assembly19.fasta.bp")
+del ambiguous_bases
+
+forbidden_chroms = [1, 2]
+validation_chrom = 5#np.random.choice(20) + 3
+k = 200
+window_size = 2*k+1
+windows_per_bin = 50
+batch_size = 50
+#margin = 15
+num_train_ex = 250000
+epochs = 12
+
+num_indels = []
+seq = []
+for i in range(4,6):#(1, 24):
+  if i in forbidden_chroms:
+    continue
+  if i == 23:
+    ch = 'X'
+  else:
+    ch = str(i)
+  print('Processing ' + ch)
+  referenceChr = reference[ch]
+  c_len = len(referenceChr) # Total chromosome length
+  num_buckets = c_len//window_size
+  num_indels_ch = [0]*num_buckets # True number of indels in each bucket
+
+  insertionLocations = np.loadtxt(data_dir + "indelLocations{}_ins.txt".format(ch)).astype(int)
+  deletionLocations = np.loadtxt(data_dir + "indelLocations{}_del.txt".format(ch)).astype(int)
+  indelLocations = np.concatenate((insertionLocations, deletionLocations)) - 1
+
+  for il in indelLocations:
+    if il//window_size >= len(num_indels_ch): break
+    num_indels_ch[il // window_size] += 1
+  
+  if i == validation_chrom:
+    num_indels_val = num_indels_ch
+  else:
+    num_indels.extend(num_indels_ch)
+  del num_indels_ch, insertionLocations, deletionLocations, indelLocations # Preserve memory
+  seq_ch = np.array_split(referenceChr[:num_buckets*window_size], num_buckets) # Discard the last chunk of the chromosome, if it is smaller than a normal bucket
+  if i == validation_chrom:
+    seq_val = seq_ch
+  else:
+    seq.extend(seq_ch)
+  del seq_ch
+
+del reference, referenceChr
+
+order = [x for x in range(len(seq))]
+random.shuffle(order)
+seq = np.array([seq[i] for i in order])
+num_indels = np.array([num_indels[i] for i in order]) # Shuffle the buckets data, so we can easily choose a random subset for testing
+
+x_train = np.array(seq[:num_train_ex])
+y_train = np.array(num_indels[:num_train_ex])
+x_test = np.array(seq_val)
+y_test = np.array(num_indels_val)
+
+print('Mean # indels per window: {}'.format(float(sum(y_train))/len(y_train)))
+
+import keras
+from keras.regularizers import l2
+from keras.layers import Conv1D, Dense, Flatten, Dropout
+from keras.layers.advanced_activations import LeakyReLU
+from keras.models import Sequential
+
+activation='relu' # make linear to enable advanced activations
+
+model = Sequential()
+model.add(Conv1D(40, kernel_size=5, activation=activation, input_shape=(window_size, 4)))#, kernel_regularizer=l2(0.0001))) # Convolutional layer
+#model.add(LeakyReLU(alpha=0.1))
+model.add(Conv1D(100, kernel_size=8, activation=activation))
+#model.add(LeakyReLU(alpha=0.1))
+model.add(Flatten())
+model.add(Dense(1024, activation=activation))#, kernel_regularizer=l2(0.01))) # FC hidden layer
+#model.add(LeakyReLU(alpha=0.1))
+model.add(Dense(1, activation='relu')) # Output layer. ReLU activation because we are trying to predict a nonnegative value!
+
+model.compile(loss=keras.losses.mean_squared_error,
+              optimizer=keras.optimizers.Adam(),
+              metrics=['mse', 'mae']) # Minimize the MSE. Also report mean absolute error
+
+model.fit(x_train, y_train,
+          batch_size=batch_size,
+          epochs=epochs,
+          verbose=1)
+
+# Predictions on the test set
+y_pred = utils.flatten(model.predict(x_test, batch_size=batch_size, verbose=1))
+
+from scipy import stats
+from sklearn import linear_model
+
+# Compute the correlation between the test set predictions and the true values
+r, p = stats.pearsonr(y_test, y_pred)
+print('')
+print('r value: {}'.format(r))
+print('p value: {}'.format(p))
+
+bin_preds, bin_trues = [], []
+for i in range(len(y_test)//windows_per_bin):
+  pred_agg, true_agg = 0, 0
+  for j in range(i*windows_per_bin, i*windows_per_bin + windows_per_bin):
+    pred_agg += y_pred[j]
+    true_agg += y_test[j]
+  bin_preds.append(pred_agg)
+  bin_trues.append(true_agg)
+
+bin_preds, bin_trues = np.array(bin_preds), np.array(bin_trues)
+
+mae = np.mean(np.abs(bin_preds - bin_trues))
+mse = np.mean(np.square(bin_preds - bin_trues))
+r_bin, p_bin = stats.pearsonr(bin_trues, bin_preds)
+avg_pred = np.mean(bin_preds)
+avg_true = np.mean(bin_trues)
+
+print('Bin size: {}, MAE: {}, MSE: {}, r: {}, p: {}, average indels predicted: {}, average indels actual: {}'.format(windows_per_bin*window_size, mae, mse, r_bin, p_bin, avg_pred, avg_true))
+
+plt.scatter(bin_trues, bin_preds)
+plt.xlabel('True number of indels')
+plt.ylabel('Predicted number of indels')
+plt.title('Predicted vs. actual indel mutation counts ($r = {:.2f}'.format(r) + (', p =$ {:.2g})'.format(p) if p else ', p < 10^{-15})$'))
+plt.plot(y_test, y_test, color='m', linewidth=2.5)
+plt.savefig('indel_rate_pred_keras.png')

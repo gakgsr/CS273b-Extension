@@ -3,4 +3,4 @@
 *.pyc
 *.zip
 .DS_Store
-nimit_test/*
+nimit-test/
