@@ -14,25 +14,27 @@ from sys import argv
 import utils
 import cs273b
 
+np.random.seed(1)
+
 data_dir = '/datadrive/project_data/'
 reference, ambiguous_bases = cs273b.load_bitpacked_reference(data_dir + "Homo_sapiens_assembly19.fasta.bp")
 del ambiguous_bases
 
 # TODO: Can augment training set with overlapping windows (i.e. starting at random positions)
 forbidden_chroms = [1, 2]
-validation_chrom = 5#np.random.choice(20) + 3
+validation_chrom = np.random.choice(19) + 3
 k = 200
 window_size = 2*k+1
 windows_per_bin = 50
 margin = 15
 expanded_window_size = window_size + 2*margin
 batch_size = 50
-num_train_ex = 250000
+num_train_ex = 25000
 epochs = 12
 
 num_indels = []
 seq = []
-for i in range(4,6):#(1, 24):
+for i in range(1, 23):
   if i in forbidden_chroms:
     continue
   if i == 23:
@@ -45,9 +47,12 @@ for i in range(4,6):#(1, 24):
   num_windows = (c_len-2*margin)//window_size
   num_indels_ch = [0]*num_windows # True number of indels in each window
 
-  insertionLocations = np.loadtxt(data_dir + "indelLocations{}_ins.txt".format(ch)).astype(int)
-  deletionLocations = np.loadtxt(data_dir + "indelLocations{}_del.txt".format(ch)).astype(int)
-  indelLocations = np.concatenate((insertionLocations, deletionLocations)) - 1
+  #insertionLocations = np.loadtxt(data_dir + "indelLocations{}_ins.txt".format(ch)).astype(int)
+  #deletionLocations = np.loadtxt(data_dir + "indelLocations{}_del.txt".format(ch)).astype(int)
+  #indelLocations = np.concatenate((insertionLocations, deletionLocations)) - 1
+  indel_data_load = np.load(data_dir + "indelLocationsFiltered" + ch + ".npy")
+  indelLocations = indel_data_load[indel_data_load[:, 2] == 1, 0] - 1
+  del indel_data_load
 
   for il in indelLocations:
     if il < margin: continue
@@ -58,7 +63,8 @@ for i in range(4,6):#(1, 24):
     num_indels_val = num_indels_ch
   else:
     num_indels.extend(num_indels_ch)
-  del num_indels_ch, insertionLocations, deletionLocations, indelLocations # Preserve memory
+  #del num_indels_ch, insertionLocations, deletionLocations, indelLocations # Preserve memory
+  del num_indels_ch, indelLocations # Preserve memory
   seq_ch = []
   for w in range(num_windows):
     # First window predictions start at index margin, but we include sequence context of length 'margin' around it, so its input array starts at index 0
@@ -81,6 +87,9 @@ x_train = np.array(seq[:num_train_ex])
 y_train = np.array(num_indels[:num_train_ex])
 x_test = np.array(seq_val)
 y_test = np.array(num_indels_val)
+
+np.save(data_dir + 'RegrKerasTestSeq' + str(validation_chrom) + '.npy', x_test)
+np.save(data_dir + 'RegrKerasTestLab' + str(validation_chrom) + '.npy', y_test)
 
 print('Mean # indels per window: {}'.format(float(sum(y_train))/len(y_train)))
 
@@ -114,6 +123,8 @@ model.fit(x_train, y_train,
 
 # Predictions on the test set
 y_pred = utils.flatten(model.predict(x_test, batch_size=batch_size, verbose=1))
+np.save(data_dir + 'RegrKerasTestLabPred' + str(validation_chrom) + '.npy', y_pred)
+
 
 from scipy import stats
 from sklearn import linear_model
@@ -143,10 +154,19 @@ avg_true = np.mean(bin_trues)
 
 print('Bin size: {}, MAE: {}, RMS error: {}, r: {}, p-value: {}, average indels predicted: {}, average indels actual: {}'.format(windows_per_bin*window_size, mae, rms, r_bin, p_bin, avg_pred, avg_true))
 
+
+regr = linear_model.LinearRegression()
+regr.fit(np.expand_dims(bin_trues, axis=1), bin_preds)
+reg_pred = regr.predict(np.expand_dims(bin_trues, axis=1))
+
 plt.scatter(bin_trues, bin_preds)
 plt.xlabel('True number of indels')
 plt.ylabel('Predicted number of indels')
 plt.title('Predicted vs. actual indel mutation counts ($r = {:.2f}'.format(r) + (', p =$ {:.2g})'.format(p) if p else ', p < 10^{-15})$'))
 line_x = np.arange(min(np.amax(bin_preds), np.amax(bin_trues)))
 plt.plot(line_x, line_x, color='m', linewidth=2.5)
-plt.savefig('indel_rate_pred_keras.png')
+plt.plot(bin_trues, reg_pred, color='g', linewidth=2.5)
+plt.savefig('indel_rate_pred_keras' + str(validation_chrom) + '.png')
+
+np.save(data_dir + 'RegrKerasBinPred' + str(validation_chrom) + '.npy', bin_preds)
+np.save(data_dir + 'RegrKerasBinTrue' + str(validation_chrom) + '.npy', bin_trues)
