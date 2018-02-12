@@ -7,9 +7,9 @@ from sklearn import metrics
 
 def sequenceLogos(dataset, plotName):
     datasetShape = dataset.shape
-    positionWiseProbability = np.zeros(datasetShape[1], 4)
+    positionWiseProbability = np.zeros((datasetShape[1], 4))
     for j in range(4):
-        positionWiseProbability[:, j] = np.sum(dataset[:, :, j], axis = 0)/datasetShape[0]
+        positionWiseProbability[:, j] = np.sum(dataset[:, :, j], axis = 0, dtype = float)/datasetShape[0]
     maxEntropy = -np.log(0.25)
     for j in range(datasetShape[1]):
         for k in range(4):

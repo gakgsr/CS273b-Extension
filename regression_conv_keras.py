@@ -23,13 +23,14 @@ del ambiguous_bases
 # TODO: Can augment training set with overlapping windows (i.e. starting at random positions)
 forbidden_chroms = [1, 2]
 validation_chrom = np.random.choice(19) + 3
+print "Validation chromosome is %d" % validation_chrom
 k = 200
 window_size = 2*k+1
 windows_per_bin = 50
 margin = 15
 expanded_window_size = window_size + 2*margin
 batch_size = 50
-num_train_ex = 25000
+num_train_ex = 500000
 epochs = 12
 
 num_indels = []
