@@ -32,6 +32,7 @@ expanded_window_size = window_size + 2*margin
 batch_size = 50
 num_train_ex = 500000
 epochs = 12
+complexity_thresh = 1.1
 
 num_indels = []
 seq = []
@@ -52,7 +53,8 @@ for i in range(1, 23):
   #deletionLocations = np.loadtxt(data_dir + "indelLocations{}_del.txt".format(ch)).astype(int)
   #indelLocations = np.concatenate((insertionLocations, deletionLocations)) - 1
   indel_data_load = np.load(data_dir + "indelLocationsFiltered" + ch + ".npy")
-  indelLocations = indel_data_load[indel_data_load[:, 2] == 1, 0] - 1
+  indelLocations = indel_data_load[np.logical_and(indel_data_load[:, 2] == 1, indel_data_load[:, 4] > complexity_thresh), 0] - 1
+  indelLocations = np.array(indelLocations, dtype = int)
   del indel_data_load
 
   for il in indelLocations:
@@ -89,8 +91,8 @@ y_train = np.array(num_indels[:num_train_ex])
 x_test = np.array(seq_val)
 y_test = np.array(num_indels_val)
 
-np.save(data_dir + 'RegrKerasTestSeq' + str(validation_chrom) + '.npy', x_test)
-np.save(data_dir + 'RegrKerasTestLab' + str(validation_chrom) + '.npy', y_test)
+#np.save(data_dir + 'RegrKerasTestSeq' + str(validation_chrom) + str(complexity_thresh) +  '.npy', x_test)
+np.save(data_dir + 'RegrKerasTestLab' + str(validation_chrom) + str(complexity_thresh) + '.npy', y_test)
 
 print('Mean # indels per window: {}'.format(float(sum(y_train))/len(y_train)))
 
@@ -124,8 +126,8 @@ model.fit(x_train, y_train,
 
 # Predictions on the test set
 y_pred = utils.flatten(model.predict(x_test, batch_size=batch_size, verbose=1))
-np.save(data_dir + 'RegrKerasTestLabPred' + str(validation_chrom) + '.npy', y_pred)
-
+np.save(data_dir + 'RegrKerasTestLabPred' + str(validation_chrom) + str(complexity_thresh) + '.npy', y_pred)
+#model.save(data_dir + 'RegrKerasModel' + str(validation_chrom) + str(complexity_thresh) + '.h5')
 
 from scipy import stats
 from sklearn import linear_model
@@ -167,7 +169,7 @@ plt.title('Predicted vs. actual indel mutation counts ($r = {:.2f}'.format(r) + 
 line_x = np.arange(min(np.amax(bin_preds), np.amax(bin_trues)))
 plt.plot(line_x, line_x, color='m', linewidth=2.5)
 plt.plot(bin_trues, reg_pred, color='g', linewidth=2.5)
-plt.savefig('indel_rate_pred_keras' + str(validation_chrom) + '.png')
+plt.savefig('indel_rate_pred_keras' + str(validation_chrom) + str(complexity_thresh) + '.png')
 
-np.save(data_dir + 'RegrKerasBinPred' + str(validation_chrom) + '.npy', bin_preds)
-np.save(data_dir + 'RegrKerasBinTrue' + str(validation_chrom) + '.npy', bin_trues)
+#np.save(data_dir + 'RegrKerasBinPred' + str(validation_chrom) + '.npy', bin_preds)
+#np.save(data_dir + 'RegrKerasBinTrue' + str(validation_chrom) + '.npy', bin_trues)

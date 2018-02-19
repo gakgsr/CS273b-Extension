@@ -20,16 +20,17 @@ filename_base_2 = data_dir + "nonindelLocationsSampled"
 # Windows to compute entropy. The smaller window is for defining sequence complexity, larger for input to CNN
 window1 = 50
 window2 = 20
+k_seq_complexity = window2
 
 # Process per chromosome, from 1-22
 for chromosome in range(1, 23):
   ##
   print "Processing chromosome {}".format(chromosome)
-  # Read the indels in this chromosome
-  locations_indels = np.array(indels_file[indels_file.columns[0]] == chromosome)
-  indel_indices = np.array(indels_file.iloc[locations_indels, 1], dtype = int)
   # Reference chromosome
   reference_chrom = reference[str(chromosome)]
+  # Read the indels in this chromosome
+  locations_indels = np.array(np.logical_and(indels_file[indels_file.columns[0]] == chromosome, indels_file[indels_file.columns[1]] + k_seq_complexity < len(reference_chrom)))
+  indel_indices = np.array(indels_file.iloc[locations_indels, 1], dtype = int)
   ##
   # Store insertions or deletions information 
   ins_del = np.zeros(len(indel_indices), dtype = int)
@@ -40,11 +41,19 @@ for chromosome in range(1, 23):
     if(len(list(indels_file.iloc[loc, 3])) > len(list(indels_file.iloc[loc, 2]))): # 'Alt' longer than 'ref': insertion
       ins_del[i] = 1
   ##
+  # Add complexity information
+  indel_sequence_indices = np.arange(2*k_seq_complexity + 1) - k_seq_complexity
+  indel_sequence_indices = np.repeat(indel_sequence_indices, indel_indices.shape[0], axis = 0)
+  indel_sequence_indices = np.reshape(indel_sequence_indices, [-1, indel_indices.shape[0]])
+  indel_sequence_indices += np.transpose(indel_indices)
+  indel_sequence_complexity = entropy.entropySequence(reference_chrom[indel_sequence_indices.transpose(), :])
   # Save the indels data
   allele_count = np.array(indels_file.iloc[locations_indels, 7], dtype = int)
   filter_value = np.array(indels_file.iloc[locations_indels, 4], dtype = int)
-  arr = np.concatenate((np.expand_dims(indel_indices, axis = 1), np.expand_dims(allele_count, axis = 1), np.expand_dims(filter_value, axis = 1), np.expand_dims(ins_del, axis = 1)), axis = 1)
+  print np.sum(indel_sequence_complexity)
+  arr = np.concatenate((np.expand_dims(indel_indices, axis = 1), np.expand_dims(allele_count, axis = 1), np.expand_dims(filter_value, axis = 1), np.expand_dims(ins_del, axis = 1), np.expand_dims(indel_sequence_complexity, axis = 1)), axis = 1)
   np.save(filename_base + str(chromosome) + '.npy', arr)
+  '''
   ##
   # Sample and save a set of strict non-indels
   nonzeroLocationsRef = np.where(np.any(reference_chrom != 0, axis = 1))[0]
@@ -56,3 +65,4 @@ for chromosome in range(1, 23):
   window_containing_indel += np.transpose(indel_indices)
   neg_positions_large = np.random.choice(list(set(nonzeroLocationsRef) - set(np.reshape(window_containing_indel, -1))), size = int(rel_size_neg_large*len(indel_indices)), replace = False)
   np.save(filename_base_2 + str(chromosome) + '.npy', neg_positions_large)
+  '''
