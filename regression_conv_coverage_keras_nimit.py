@@ -21,6 +21,9 @@ reference, ambiguous_bases = cs273b.load_bitpacked_reference(data_dir + "Homo_sa
 del ambiguous_bases
 
 # TODO: Can augment training set with overlapping windows (i.e. starting at random positions)
+
+use_coverage = True
+use_recombination = False # Doesn't currently work
 forbidden_chroms = [1, 2]
 validation_chrom = 5#np.random.choice(20) + 3
 k = 200
@@ -39,6 +42,7 @@ for i in range(4,6):#(1, 24):
     continue
   if i == 23:
     ch = 'X'
+    continue # Recombination data is in multiple files for chromosome X; we skip it for now
   else:
     ch = str(i)
   print('Processing ' + ch)
@@ -50,7 +54,8 @@ for i in range(4,6):#(1, 24):
   insertionLocations = np.loadtxt(data_dir + "indelLocations{}_ins.txt".format(ch)).astype(int)
   deletionLocations = np.loadtxt(data_dir + "indelLocations{}_del.txt".format(ch)).astype(int)
   indelLocations = np.concatenate((insertionLocations, deletionLocations)) - 1
-  coverage = lc.load_coverage(data_dir + "coverage/{}.npy".format(i))
+  if use_coverage: coverage = lc.load_coverage(data_dir + "coverage/{}.npy".format(ch))
+  if use_recombination: recombination = lr.load_recombination(data_dir + "recombination_map/genetic_map_chr{}_combined_b37.txt".format(ch)) # TODO: Why does this have fewer entries than the others...?
 
   for il in indelLocations:
     if il < margin: continue
@@ -66,7 +71,10 @@ for i in range(4,6):#(1, 24):
   for w in range(num_windows):
     # First window predictions start at index margin, but we include sequence context of length 'margin' around it, so its input array starts at index 0
     window_lb, window_ub = w*window_size, (w+1)*window_size + 2*margin # Include additional sequence context of length 'margin' around each window
-    seq_ch.append(np.concatenate((referenceChr[window_lb:window_ub], coverage[window_lb:window_ub]), axis=1))
+    next_window = referenceChr[window_lb:window_ub]
+    if use_coverage: next_window = np.concatenate((next_window, coverage[window_lb:window_ub]), axis=1)
+    if use_recombination: next_window = np.concatenate((next_window, recombination[window_lb:window_ub]), axis=1)
+    seq_ch.append(next_window)
   if i == validation_chrom:
     seq_val = seq_ch
   else:
@@ -74,6 +82,8 @@ for i in range(4,6):#(1, 24):
   del seq_ch
 
 del reference, referenceChr
+if use_coverage: del coverage
+if use_recombination: del recombination
 
 order = [x for x in range(len(seq))]
 random.shuffle(order)
@@ -99,7 +109,8 @@ reg_param = 0.0001
 reg = l2(reg_param)
 
 model = Sequential()
-model.add(Conv1D(40, kernel_size=5, activation=activation, input_shape=(expanded_window_size, 5), kernel_regularizer=reg)) # Convolutional layer. Input channels: 5 [A,C,G,T,coverage]
+# First convolutional layer. Input channels: [A,C,G,T] and coverage or recomb if applicable
+model.add(Conv1D(40, kernel_size=5, activation=activation, input_shape=(expanded_window_size, 4 + use_coverage + use_recombination), kernel_regularizer=reg))
 if use_lrelu: model.add(LeakyReLU(alpha=0.1))
 model.add(Conv1D(100, kernel_size=8, activation=activation, kernel_regularizer=reg))
 if use_lrelu: model.add(LeakyReLU(alpha=0.1))
