@@ -2,6 +2,7 @@
    indel mutations within each bucket. Uses two convolutional layers followed by two fully-connected layers'''
 
 # TODO: Compare correlation with that of random selected examples
+# TODO: Can augment training set with overlapping windows (i.e. starting at random positions)
 
 import matplotlib
 matplotlib.use('agg')
@@ -20,24 +21,24 @@ data_dir = '/datadrive/project_data/'
 reference, ambiguous_bases = cs273b.load_bitpacked_reference(data_dir + "Homo_sapiens_assembly19.fasta.bp")
 del ambiguous_bases
 
-# TODO: Can augment training set with overlapping windows (i.e. starting at random positions)
-
+#random.seed(1)
 use_coverage = True
-use_recombination = False # Doesn't currently work
+use_recombination = True
+filter_indels = False
 forbidden_chroms = [1, 2]
-validation_chrom = 5#np.random.choice(20) + 3
+validation_chrom = 8#np.random.choice(20) + 3
 k = 200
 window_size = 2*k+1
 windows_per_bin = 50
-margin = 15
+margin = 16
 expanded_window_size = window_size + 2*margin
-batch_size = 50
-num_train_ex = 250000
+batch_size = 100
+num_train_ex = 600000
 epochs = 12
 
 num_indels = []
 seq = []
-for i in range(4,6):#(1, 24):
+for i in range(1, 24):
   if i in forbidden_chroms:
     continue
   if i == 23:
@@ -51,11 +52,16 @@ for i in range(4,6):#(1, 24):
   num_windows = (c_len-2*margin)//window_size
   num_indels_ch = [0]*num_windows # True number of indels in each window
 
-  insertionLocations = np.loadtxt(data_dir + "indelLocations{}_ins.txt".format(ch)).astype(int)
-  deletionLocations = np.loadtxt(data_dir + "indelLocations{}_del.txt".format(ch)).astype(int)
-  indelLocations = np.concatenate((insertionLocations, deletionLocations)) - 1
+  if filter_indels:
+    indel_data_load = np.load(data_dir + "indelLocationsFiltered{}.npy".format(ch))
+    indelLocations = indel_data_load[indel_data_load[:, 2] == 1, 0] - 1
+    indelLocations = np.asarray(indelLocations, dtype=int)
+  else:
+    insertionLocations = np.loadtxt(data_dir + "indelLocations{}_ins.txt".format(ch)).astype(int)
+    deletionLocations = np.loadtxt(data_dir + "indelLocations{}_del.txt".format(ch)).astype(int)
+    indelLocations = np.concatenate((insertionLocations, deletionLocations)) - 1
   if use_coverage: coverage = lc.load_coverage(data_dir + "coverage/{}.npy".format(ch))
-  if use_recombination: recombination = lr.load_recombination(data_dir + "recombination_map/genetic_map_chr{}_combined_b37.txt".format(ch)) # TODO: Why does this have fewer entries than the others...?
+  if use_recombination: recombination = lr.load_recombination(data_dir + "recombination_map/genetic_map_chr{}_combined_b37.txt".format(ch), c_len)
 
   for il in indelLocations:
     if il < margin: continue
@@ -87,13 +93,13 @@ if use_recombination: del recombination
 
 order = [x for x in range(len(seq))]
 random.shuffle(order)
-seq = np.array([seq[i] for i in order]) # Shuffle the training data, so we can easily choose a random subset for testing
-num_indels = np.array([num_indels[i] for i in order])
+seq = np.asarray([seq[i] for i in order]) # Shuffle the training data, so we can easily choose a random subset for testing
+num_indels = np.asarray([num_indels[i] for i in order])
 
-x_train = np.array(seq[:num_train_ex])
-y_train = np.array(num_indels[:num_train_ex])
-x_test = np.array(seq_val)
-y_test = np.array(num_indels_val)
+x_train = np.asarray(seq[:num_train_ex])
+y_train = np.asarray(num_indels[:num_train_ex])
+x_test = np.asarray(seq_val)
+y_test = np.asarray(num_indels_val)
 
 print('Mean # indels per window: {}'.format(float(sum(y_train))/len(y_train)))
 
@@ -115,7 +121,9 @@ if use_lrelu: model.add(LeakyReLU(alpha=0.1))
 model.add(Conv1D(100, kernel_size=8, activation=activation, kernel_regularizer=reg))
 if use_lrelu: model.add(LeakyReLU(alpha=0.1))
 model.add(Flatten())
-model.add(Dense(1024, activation=activation, kernel_regularizer=reg)) # FC hidden layer
+model.add(Dense(4024, activation=activation, kernel_regularizer=reg)) # FC hidden layer 1
+if use_lrelu: model.add(LeakyReLU(alpha=0.1))
+model.add(Dense(1000, activation=activation, kernel_regularizer=reg)) # FC hidden layer 2
 if use_lrelu: model.add(LeakyReLU(alpha=0.1))
 model.add(Dense(1, activation='relu', kernel_regularizer=reg)) # Output layer. ReLU activation because we are trying to predict a nonnegative value!
 
@@ -149,7 +157,7 @@ for i in range(len(y_test)//windows_per_bin):
   bin_preds.append(pred_agg)
   bin_trues.append(true_agg)
 
-bin_preds, bin_trues = np.array(bin_preds), np.array(bin_trues)
+bin_preds, bin_trues = np.asarray(bin_preds), np.asarray(bin_trues)
 
 mae = np.mean(np.abs(bin_preds - bin_trues))
 rms = np.sqrt(np.mean(np.square(bin_preds - bin_trues)))

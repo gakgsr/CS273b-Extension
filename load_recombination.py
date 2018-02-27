@@ -9,7 +9,7 @@ logger = logging.getLogger("indel")
 logger.setLevel(logging.INFO)
 
 
-def load_recombination(in_path):
+def load_recombination(in_path, desired_len=0):
     """
     Loads recombination map of the genome from text file ***for a single contig***.
     Expects one text file per contig.
@@ -31,4 +31,11 @@ def load_recombination(in_path):
     recombination_map[missing_indices] = np.interp(missing_indices, indices, rates)
     recombination_map = recombination_map.reshape(len(recombination_map),1)
     logger.info("Recombination map loaded.")
+    if desired_len:
+      return pad(recombination_map, desired_len)
     return recombination_map
+
+def pad(arr, new_len): # Pad to desired length
+    if len(arr) >= new_len:
+      return arr
+    return np.pad(arr, [(0,new_len-len(arr)), (0,0)], mode='edge')
