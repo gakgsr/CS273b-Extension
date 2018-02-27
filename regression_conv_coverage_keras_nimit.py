@@ -7,7 +7,7 @@
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
-
+from math import sqrt
 import tensorflow as tf
 import numpy as np
 import random
@@ -56,11 +56,13 @@ for i in range(1, 24):
     indel_data_load = np.load(data_dir + "indelLocationsFiltered{}.npy".format(ch))
     indelLocations = indel_data_load[indel_data_load[:, 2] == 1, 0] - 1
     indelLocations = np.asarray(indelLocations, dtype=int)
+    del indel_data_load
   else:
     insertionLocations = np.loadtxt(data_dir + "indelLocations{}_ins.txt".format(ch)).astype(int)
     deletionLocations = np.loadtxt(data_dir + "indelLocations{}_del.txt".format(ch)).astype(int)
     indelLocations = np.concatenate((insertionLocations, deletionLocations)) - 1
-  if use_coverage: coverage = lc.load_coverage(data_dir + "coverage/{}.npy".format(ch))
+    del insertionLocations, deletionLocations
+  if use_coverage: coverage = lc.load_coverage(data_dir + "coverage/{}.npy".format(ch)) # Note: For chromosome 6? the coverage data length is actually 1 shorter than the chromosome length
   if use_recombination: recombination = lr.load_recombination(data_dir + "recombination_map/genetic_map_chr{}_combined_b37.txt".format(ch), c_len)
 
   for il in indelLocations:
@@ -72,7 +74,8 @@ for i in range(1, 24):
     num_indels_val = num_indels_ch
   else:
     num_indels.extend(num_indels_ch)
-  del num_indels_ch, insertionLocations, deletionLocations, indelLocations # Preserve memory
+  del num_indels_ch, indelLocations # Preserve memory
+
   seq_ch = []
   for w in range(num_windows):
     # First window predictions start at index margin, but we include sequence context of length 'margin' around it, so its input array starts at index 0
@@ -86,10 +89,10 @@ for i in range(1, 24):
   else:
     seq.extend(seq_ch)
   del seq_ch
+  if use_coverage: del coverage
+  if use_recombination: del recombination
 
 del reference, referenceChr
-if use_coverage: del coverage
-if use_recombination: del recombination
 
 order = [x for x in range(len(seq))]
 random.shuffle(order)
@@ -127,9 +130,11 @@ model.add(Dense(1000, activation=activation, kernel_regularizer=reg)) # FC hidde
 if use_lrelu: model.add(LeakyReLU(alpha=0.1))
 model.add(Dense(1, activation='relu', kernel_regularizer=reg)) # Output layer. ReLU activation because we are trying to predict a nonnegative value!
 
+def rms(y_true, y_pred): return keras.backend.sqrt(keras.losses.mean_squared_error(y_true, y_pred))
+
 model.compile(loss=keras.losses.mean_squared_error,
               optimizer=keras.optimizers.Adam(),
-              metrics=['mse', 'mae']) # Minimize the MSE. Also report mean absolute error
+              metrics=['mse', 'mae']) # Minimize the MSE. Report mean absolute error and mean squared error. TODO: For some reason rms is totally different than sqrt(mse)... why??
 
 model.fit(x_train, y_train,
           batch_size=batch_size,
