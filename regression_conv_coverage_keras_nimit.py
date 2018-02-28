@@ -3,7 +3,8 @@
 
 # TODO: Compare correlation with that of random selected examples
 # TODO: Can augment training set with overlapping windows (i.e. starting at random positions)
-
+import time
+start_time = time.time()
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
@@ -34,7 +35,8 @@ margin = 16
 expanded_window_size = window_size + 2*margin
 batch_size = 100
 num_train_ex = 600000
-epochs = 12
+epoch_val_frac = 0.1 # Number of examples to validate with after each epoch
+epochs = 20
 
 num_indels = []
 seq = []
@@ -103,6 +105,7 @@ x_train = np.asarray(seq[:num_train_ex])
 y_train = np.asarray(num_indels[:num_train_ex])
 x_test = np.asarray(seq_val)
 y_test = np.asarray(num_indels_val)
+epoch_val_indices = np.random.choice(len(x_test), int(len(x_test) * epoch_val_frac), replace=False)
 
 print('Mean # indels per window: {}'.format(float(sum(y_train))/len(y_train)))
 
@@ -111,6 +114,7 @@ from keras.regularizers import l2
 from keras.layers import Conv1D, Dense, Flatten, Dropout
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Sequential
+from keras.callbacks import *
 
 use_lrelu = False
 activation = 'linear' if use_lrelu else 'relu' # make linear to enable advanced activations
@@ -124,9 +128,7 @@ if use_lrelu: model.add(LeakyReLU(alpha=0.1))
 model.add(Conv1D(100, kernel_size=8, activation=activation, kernel_regularizer=reg))
 if use_lrelu: model.add(LeakyReLU(alpha=0.1))
 model.add(Flatten())
-model.add(Dense(4024, activation=activation, kernel_regularizer=reg)) # FC hidden layer 1
-if use_lrelu: model.add(LeakyReLU(alpha=0.1))
-model.add(Dense(1000, activation=activation, kernel_regularizer=reg)) # FC hidden layer 2
+model.add(Dense(1024, activation=activation, kernel_regularizer=reg)) # FC hidden layer 1
 if use_lrelu: model.add(LeakyReLU(alpha=0.1))
 model.add(Dense(1, activation='relu', kernel_regularizer=reg)) # Output layer. ReLU activation because we are trying to predict a nonnegative value!
 
@@ -136,13 +138,23 @@ model.compile(loss=keras.losses.mean_squared_error,
               optimizer=keras.optimizers.Adam(),
               metrics=['mse', 'mae']) # Minimize the MSE. Report mean absolute error and mean squared error. TODO: For some reason rms is totally different than sqrt(mse)... why??
 
+setup_time = time.time()
+print('Total setup time: {} sec'.format(setup_time - start_time))
+
 model.fit(x_train, y_train,
           batch_size=batch_size,
           epochs=epochs,
-          verbose=1)
+          verbose=1,
+          validation_data=(x_test[epoch_val_indices], y_test[epoch_val_indices]),
+          callbacks=[CSVLogger('KerasTrainingLog.csv')])
+
+train_time = time.time()
+print('Total training time: {} sec'.format(train_time - setup_time))
 
 # Predictions on the test set
 y_pred = utils.flatten(model.predict(x_test, batch_size=batch_size, verbose=1))
+np.save(data_dir + 'RegrKerasWindowPred.npy', y_test)
+np.save(data_dir + 'RegrKerasWindowPred.npy', y_pred)
 
 from scipy import stats
 from sklearn import linear_model
@@ -182,3 +194,7 @@ plt.savefig('indel_rate_pred_keras.png')
 
 np.save(data_dir + 'RegrKerasBinPred.npy', bin_preds)
 np.save(data_dir + 'RegrKerasBinTrue.npy', bin_trues)
+
+test_time = time.time()
+print('Total testing time: {} sec'.format(test_time - train_time))
+print('Overall time: {} sec'.format(test_time - start_time))
