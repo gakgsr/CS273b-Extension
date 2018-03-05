@@ -25,6 +25,7 @@ del ambiguous_bases
 #random.seed(1)
 use_coverage = True
 use_recombination = True
+scalarize = False # When true, coverage and/or recombination are included as scalars instead
 filter_indels = False
 forbidden_chroms = [1, 2]
 validation_chrom = 8#np.random.choice(20) + 3
@@ -35,11 +36,12 @@ margin = 16
 expanded_window_size = window_size + 2*margin
 batch_size = 100
 num_train_ex = 600000
-epoch_val_frac = 0.1 # Number of examples to validate with after each epoch
+epoch_val_frac = 0.1 # Fraction of examples to validate with after each epoch (out of total validation data)
 epochs = 20
 
 num_indels = []
 seq = []
+if scalarize: scalar_data, scalar_data_val = [], []
 for i in range(1, 24):
   if i in forbidden_chroms:
     continue
@@ -79,17 +81,31 @@ for i in range(1, 24):
   del num_indels_ch, indelLocations # Preserve memory
 
   seq_ch = []
+  if scalarize: scalar_data_ch = []
   for w in range(num_windows):
     # First window predictions start at index margin, but we include sequence context of length 'margin' around it, so its input array starts at index 0
     window_lb, window_ub = w*window_size, (w+1)*window_size + 2*margin # Include additional sequence context of length 'margin' around each window
     next_window = referenceChr[window_lb:window_ub]
-    if use_coverage: next_window = np.concatenate((next_window, coverage[window_lb:window_ub]), axis=1)
-    if use_recombination: next_window = np.concatenate((next_window, recombination[window_lb:window_ub]), axis=1)
+    if scalarize: scalar_datum = []
+    if use_coverage:
+      if scalarize:
+        scalar_datum.append(np.mean(coverage[window_lb:window_ub]))
+      else:
+        next_window = np.concatenate((next_window, coverage[window_lb:window_ub]), axis=1)
+    if use_recombination:
+      if scalarize:
+        scalar_datum.append(np.mean(recombination[window_lb:window_ub]))
+      else:
+        next_window = np.concatenate((next_window, recombination[window_lb:window_ub]), axis=1)
     seq_ch.append(next_window)
+    if scalarize:
+      scalar_data_ch.append(scalar_datum)
   if i == validation_chrom:
     seq_val = seq_ch
+    if scalarize: scalar_data_val = scalar_data_ch
   else:
     seq.extend(seq_ch)
+    if scalarize: scalar_data.extend(scalar_data_ch)
   del seq_ch
   if use_coverage: del coverage
   if use_recombination: del recombination
