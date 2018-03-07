@@ -37,7 +37,7 @@ expanded_window_size = window_size + 2*margin
 batch_size = 100
 num_train_ex = 600000
 epoch_val_frac = 0.1 # Fraction of examples to validate with after each epoch (out of total validation data)
-epochs = 20
+epochs = 5
 
 num_indels = []
 seq = []
@@ -157,12 +157,13 @@ model.compile(loss=keras.losses.mean_squared_error,
 setup_time = time.time()
 print('Total setup time: {} sec'.format(setup_time - start_time))
 
+logfile = 'KerasTrainingLog.csv'
 model.fit(x_train, y_train,
           batch_size=batch_size,
           epochs=epochs,
           verbose=1,
           validation_data=(x_test[epoch_val_indices], y_test[epoch_val_indices]),
-          callbacks=[CSVLogger('KerasTrainingLog.csv')])
+          callbacks=[CSVLogger(logfile)])
 
 train_time = time.time()
 print('Total training time: {} sec'.format(train_time - setup_time))
@@ -177,9 +178,8 @@ from sklearn import linear_model
 
 # Compute the correlation between the test set predictions and the true values
 r, p = stats.pearsonr(y_test, y_pred)
-print('')
-print('r value: {}'.format(r))
-print('p value: {}'.format(p))
+outstr = '\nWindow predictions r value: {}, p value: {}'.format(r, p)
+with open(logfile, 'a') as f: f.write(outstr + '\n')
 
 bin_preds, bin_trues = [], []
 for i in range(len(y_test)//windows_per_bin):
