@@ -37,6 +37,8 @@ for i in range(1, 24):
 
   coverage = lc.load_coverage(data_dir + "coverage/{}.npy".format(ch))
   recombination = lr.load_recombination(data_dir + "recombination_map/genetic_map_chr{}_combined_b37.txt".format(ch), c_len)
+  print('CHROMOSOME {} MEAN COVERAGE: {:.3e}'.format(ch, np.mean(coverage)))
+  print('CHROMOSOME {} MEAN RECOMBINATION: {:.3e}'.format(ch, np.mean(recombination)))
 
   rel_vars_cvr = []
   rel_vars_rec = []

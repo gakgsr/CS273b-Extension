@@ -37,7 +37,7 @@ expanded_window_size = window_size + 2*margin
 batch_size = 100
 num_train_ex = 600000
 epoch_val_frac = 0.1 # Fraction of examples to validate with after each epoch (out of total validation data)
-epochs = 5
+epochs = 10
 
 if not (use_coverage or use_recombination): scalarize = False
 
@@ -129,6 +129,7 @@ if scalarize:
 epoch_val_indices = np.random.choice(len(x_test), int(len(x_test) * epoch_val_frac), replace=False)
 
 print('Mean # indels per window: {}'.format(float(sum(y_train))/len(y_train)))
+print('Mean # val indels per window: {}'.format(float(sum(y_test))/len(y_test)))
 
 import keras
 from keras.regularizers import l2
