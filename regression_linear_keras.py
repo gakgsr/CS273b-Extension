@@ -32,7 +32,7 @@ margin = 15
 expanded_window_size = window_size + 2*margin
 batch_size = 50
 num_train_ex = 500000
-epochs = 12
+epochs = 2
 
 num_indels = []
 seq = []
@@ -123,8 +123,8 @@ y_pred = utils.flatten(model.predict(x_test, batch_size=batch_size, verbose=1))
 
 for layer in model.layers:
   weights = layer.get_weights()
-  print weights.shape
-  plot_seq_logo(weights, 'keras_linear_')
+  weights = np.reshape(np.array(weights[0]), [-1, 4])
+  print np.mean(weights, axis = 0)
 
 from scipy import stats
 from sklearn import linear_model

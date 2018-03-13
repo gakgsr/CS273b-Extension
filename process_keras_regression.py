@@ -13,11 +13,11 @@ window_size = 2*k+1
 windows_per_bin = 1
 margin = 15
 expanded_window_size = window_size + 2*margin
-complexity_thresh = 1.1
+complexity_thresh = 0
 
 #x_test = np.load(data_dir + 'RegrKerasTestSeq' + str(validation_chrom) + str(complexity_thresh) + '.npy')
-y_test = np.load(data_dir + 'RegrKerasTestLab' + str(validation_chrom) + str(complexity_thresh) + '.npy')
-y_pred = np.load(data_dir + 'RegrKerasTestLabPred' + str(validation_chrom) + str(complexity_thresh) + '.npy')
+y_test = np.load(data_dir + 'RegrKerasTestLab' + str(validation_chrom) + '.npy')
+y_pred = np.load(data_dir + 'RegrKerasTestLabPred' + str(validation_chrom) + '.npy')
 
 # Average number of indels in the 401 sized window as threshold
 threshold = 3

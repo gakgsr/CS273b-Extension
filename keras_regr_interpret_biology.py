@@ -41,37 +41,32 @@ print "Fraction of coding length is %f" % cdng_frac
 
 cent_regions = np.zeros(val_chrom_len, dtype = bool) + 1
 cent_regions[44033744:45877265] = 0
-cent_frac = np.sum(cdent_regions, dtype = float)/val_chrom_len
+cent_frac = np.sum(cent_regions, dtype = float)/val_chrom_len
 print "Fraction of centromere length is %f" % cent_frac
 
 over_pred, over_pred_cdng, over_pred_cent = 0, 0, 0
 undr_pred, undr_pred_cdng, undr_pred_cent = 0, 0, 0
 c = ['b']*len(y_test)
+f = 0.9
 for i in range(len(y_test)):
   if(y_pred[i] > 1.1*y_test[i]):
     over_pred += 1
-    if(np.sum(cdng_regions[i*window_size + margin:(i+1)*window_size + margin]) == 0 and np.sum(cent_regions[i*window_size + margin:(i+1)*window_size + margin]) == 0):
+    if(np.sum(cdng_regions[i*window_size + margin:(i+1)*window_size + margin]) <= f*window_size):
       over_pred_cdng += 1
-      over_pred_cent += 1
-      c[i] = 'y'
-    elif(np.sum(cdng_regions[i*window_size + margin:(i+1)*window_size + margin]) == 0):
-      over_pred_cdng += 1
-      c[i] = 'r'
-    elif(np.sum(cent_regions[i*window_size + margin:(i+1)*window_size + margin]) == 0):
-      over_pred_cent += 1
-      c[i] = 'g'
   if(y_pred[i] < 0.9*y_test[i]):
     undr_pred += 1
-    if(np.sum(cdng_regions[i*window_size + margin:(i+1)*window_size + margin]) == 0 and np.sum(cent_regions[i*window_size + margin:(i+1)*window_size + margin]) == 0):
+    if(np.sum(cdng_regions[i*window_size + margin:(i+1)*window_size + margin]) <= f*window_size):
       undr_pred_cdng += 1
+
+for i in range(len(y_test)):
+  if(np.sum(cent_regions[i*window_size + margin:(i+1)*window_size + margin]) <= f*window_size):
+    if(y_pred[i] != 0 or y_test[i] != 0):
+      print "Non zero element"
+    if y_pred[i] > 1.1*y_test[i]:
+      over_pred_cent += 1
+    if y_pred[i] < 0.9*y_test[i]:
       undr_pred_cent += 1
-      c[i] = 'y'
-    elif(np.sum(cdng_regions[i*window_size + margin:(i+1)*window_size + margin]) == 0):
-      undr_pred_cdng += 1
-      c[i] = 'r'
-    elif(np.sum(cent_regions[i*window_size + margin:(i+1)*window_size + margin]) == 0):
-      undr_pred_cent += 1
-      c[i] = 'g'
+
 
 print "Ratio of coding regions in over predictions is:"
 print float(over_pred_cdng)/over_pred
@@ -93,4 +88,4 @@ plt.title('Predicted vs. actual indel mutation counts')
 line_x = np.arange(min(np.amax(y_pred), np.amax(y_pred)))
 plt.plot(line_x, line_x, color='m', linewidth=2.5)
 plt.plot(y_test, reg_pred, color='g', linewidth=2.5)
-plt.savefig('indel_rate_pred_keras_non_coding_rgn_cent' + str(validation_chrom) + str(complexity_thresh) + '_' + str(windows_per_bin) + '.png')
+#plt.savefig('indel_rate_pred_keras_non_coding_rgn_cent' + str(validation_chrom) + str(complexity_thresh) + '_' + str(windows_per_bin) + '.png')

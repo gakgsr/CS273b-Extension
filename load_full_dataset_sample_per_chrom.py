@@ -117,13 +117,13 @@ class DatasetLoader(object):
       ## Load and process the positive (indels) dataset
       # This is a 4 column data: indel locations, allele count, filter value, insertion (1) or deletion (0)
       indel_data_load = np.load(data_dir + "indelLocationsFiltered" + str(chromosome) + ".npy")
-      indel_indices_set = set(indel_data_load[:, 0])
+      indel_indices_set = set(np.array(indel_data_load[:, 0], dtype = int))
       indel_data_load = indel_data_load[indel_data_load[:, 0] + k < referenceChr.shape[0]]
       # Remove those that have complexity below the threshold
       indel_sequence_indices = np.arange(2*k_seq_complexity + 1) - k_seq_complexity
       indel_sequence_indices = np.repeat(indel_sequence_indices, indel_data_load.shape[0], axis = 0)
       indel_sequence_indices = np.reshape(indel_sequence_indices, [-1, indel_data_load.shape[0]])
-      indel_sequence_indices += np.transpose(indel_data_load[:, 0])
+      indel_sequence_indices += np.transpose(np.array(indel_data_load[:, 0], dtype = int))
       indel_sequence_complexity = entropy.entropySequence(referenceChr[indel_sequence_indices.transpose(), :])
       del indel_sequence_indices
       # Filter by sequence complexity and filter value around 20 sized window and complexity threshold
@@ -146,7 +146,7 @@ class DatasetLoader(object):
         filtered_indices = total_indices[filtered_indices]
         indel_indices = np.random.choice(filtered_indices, size = lengthIndels_per_chrom, replace = False)
       ##
-      indelLocations = indel_data_load[indel_indices, 0]
+      indelLocations = np.array(indel_data_load[indel_indices, 0], dtype = int)
       allele_count_val = indel_data_load[indel_indices, 1]
       del indel_data_load, indel_indices, filtered_indices, total_indices
       indelLocations = indelLocations - self.offset
