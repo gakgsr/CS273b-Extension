@@ -13,6 +13,7 @@ import random
 from sys import argv
 import utils
 import cs273b
+from sequence_analysis import plot_seq_logo
 
 np.random.seed(1)
 
@@ -91,7 +92,7 @@ x_test = np.array(seq_val)
 y_test = np.array(num_indels_val)
 
 #np.save(data_dir + 'RegrKerasTestSeq' + str(validation_chrom) + str(complexity_thresh) +  '.npy', x_test)
-np.save(data_dir + 'RegrKerasLinTestLab' + str(validation_chrom) + '.npy', y_test)
+#np.save(data_dir + 'RegrKerasLinTestLab' + str(validation_chrom) + '.npy', y_test)
 
 print('Mean # indels per window: {}'.format(float(sum(y_train))/len(y_train)))
 
@@ -117,8 +118,13 @@ model.fit(x_train, y_train,
 
 # Predictions on the test set
 y_pred = utils.flatten(model.predict(x_test, batch_size=batch_size, verbose=1))
-np.save(data_dir + 'RegrKerasLinTestLabPred' + str(validation_chrom) + '.npy', y_pred)
+#np.save(data_dir + 'RegrKerasLinTestLabPred' + str(validation_chrom) + '.npy', y_pred)
 #model.save(data_dir + 'RegrKerasModel' + str(validation_chrom) + str(complexity_thresh) + '.h5')
+
+for layer in model.layers:
+  weights = layer.get_weights()
+  print weights.shape
+  plot_seq_logo(weights, 'keras_linear_')
 
 from scipy import stats
 from sklearn import linear_model
@@ -160,7 +166,7 @@ plt.title('Predicted vs. actual indel mutation counts ($r = {:.2f}'.format(r) + 
 line_x = np.arange(min(np.amax(bin_preds), np.amax(bin_trues)))
 plt.plot(line_x, line_x, color='m', linewidth=2.5)
 plt.plot(bin_trues, reg_pred, color='g', linewidth=2.5)
-plt.savefig('indel_rate_pred_keras_lin' + str(validation_chrom) + '.png')
+#plt.savefig('indel_rate_pred_keras_lin' + str(validation_chrom) + '.png')
 
 #np.save(data_dir + 'RegrKerasBinPred' + str(validation_chrom) + '.npy', bin_preds)
 #np.save(data_dir + 'RegrKerasBinTrue' + str(validation_chrom) + '.npy', bin_trues)
